@@ -35,45 +35,47 @@ def mock_session():
 def agent_storage(mock_engine, mock_session):
     """Create a SingleStoreStorage instance for agent mode with mocked components."""
     session_factory, session_instance = mock_session
-    with patch("agno.storage.singlestore.sessionmaker", return_value=session_factory):
-        with patch("agno.storage.singlestore.inspect", return_value=MagicMock()):
-            storage = SingleStoreStorage(table_name="agent_sessions", schema="ai", db_engine=mock_engine, mode="agent")
-            # Mock table_exists to return True
-            storage.table_exists = MagicMock(return_value=True)
-            return storage, session_instance
+    with patch("agno.storage.singlestore.sessionmaker", return_value=session_factory), patch(
+        "agno.storage.singlestore.inspect", return_value=MagicMock()
+    ):
+        storage = SingleStoreStorage(table_name="agent_sessions", schema="ai", db_engine=mock_engine, mode="agent")
+        # Mock table_exists to return True
+        storage.table_exists = MagicMock(return_value=True)
+        return storage, session_instance
 
 
 @pytest.fixture
 def workflow_storage(mock_engine, mock_session):
     """Create a SingleStoreStorage instance for workflow mode with mocked components."""
     session_factory, session_instance = mock_session
-    with patch("agno.storage.singlestore.sessionmaker", return_value=session_factory):
-        with patch("agno.storage.singlestore.inspect", return_value=MagicMock()):
-            storage = SingleStoreStorage(
-                table_name="workflow_sessions", schema="ai", db_engine=mock_engine, mode="workflow"
-            )
-            # Mock table_exists to return True
-            storage.table_exists = MagicMock(return_value=True)
-            return storage, session_instance
+    with patch("agno.storage.singlestore.sessionmaker", return_value=session_factory), patch(
+        "agno.storage.singlestore.inspect", return_value=MagicMock()
+    ):
+        storage = SingleStoreStorage(
+            table_name="workflow_sessions", schema="ai", db_engine=mock_engine, mode="workflow"
+        )
+        # Mock table_exists to return True
+        storage.table_exists = MagicMock(return_value=True)
+        return storage, session_instance
 
 
 def test_initialization():
     """Test SingleStoreStorage initialization with different parameters."""
     # Test with db_url
-    with patch("agno.storage.singlestore.create_engine") as mock_create_engine:
-        with patch("agno.storage.singlestore.sessionmaker"):
-            with patch("agno.storage.singlestore.inspect"):
-                mock_engine = MagicMock()
-                mock_create_engine.return_value = mock_engine
+    with patch("agno.storage.singlestore.create_engine") as mock_create_engine, patch(
+        "agno.storage.singlestore.sessionmaker"
+    ), patch("agno.storage.singlestore.inspect"):
+        mock_engine = MagicMock()
+        mock_create_engine.return_value = mock_engine
 
-                storage = SingleStoreStorage(table_name="test_table", db_url="mysql://user:pass@localhost/db")
+        storage = SingleStoreStorage(table_name="test_table", db_url="mysql://user:pass@localhost/db")
 
-                mock_create_engine.assert_called_once_with(
-                    "mysql://user:pass@localhost/db", connect_args={"charset": "utf8mb4"}
-                )
-                assert storage.table_name == "test_table"
-                assert storage.schema == "ai"  # Default value
-                assert storage.mode == "agent"  # Default value
+        mock_create_engine.assert_called_once_with(
+            "mysql://user:pass@localhost/db", connect_args={"charset": "utf8mb4"}
+        )
+        assert storage.table_name == "test_table"
+        assert storage.schema == "ai"  # Default value
+        assert storage.mode == "agent"  # Default value
 
     # Test with missing db_url and db_engine
     with pytest.raises(ValueError, match="Must provide either db_url or db_engine"):
@@ -82,7 +84,7 @@ def test_initialization():
 
 def test_agent_storage_crud(agent_storage):
     """Test CRUD operations for agent storage."""
-    storage, mock_session = agent_storage
+    storage, _ = agent_storage
 
     # Create a test session
     session = AgentSession(
@@ -125,7 +127,7 @@ def test_agent_storage_crud(agent_storage):
 
 def test_workflow_storage_crud(workflow_storage):
     """Test CRUD operations for workflow storage."""
-    storage, mock_session = workflow_storage
+    storage, _ = workflow_storage
 
     # Create a test session
     session = WorkflowSession(
@@ -313,15 +315,15 @@ def test_drop_table(agent_storage):
 
 def test_mode_switching():
     """Test switching between agent and workflow modes."""
-    with patch("agno.storage.singlestore.sessionmaker"):
-        with patch("agno.storage.singlestore.inspect"):
-            with patch("agno.storage.singlestore.create_engine"):
-                # Create storage in agent mode
-                storage = SingleStoreStorage(table_name="test_table", db_url="mysql://user:pass@localhost/db")
-                assert storage.mode == "agent"
+    with patch("agno.storage.singlestore.sessionmaker"), patch("agno.storage.singlestore.inspect"), patch(
+        "agno.storage.singlestore.create_engine"
+    ):
+        # Create storage in agent mode
+        storage = SingleStoreStorage(table_name="test_table", db_url="mysql://user:pass@localhost/db")
+        assert storage.mode == "agent"
 
-                # Switch to workflow mode
-                with patch.object(storage, "get_table") as mock_get_table:
-                    storage.mode = "workflow"
-                    assert storage.mode == "workflow"
-                    mock_get_table.assert_called_once()
+        # Switch to workflow mode
+        with patch.object(storage, "get_table") as mock_get_table:
+            storage.mode = "workflow"
+            assert storage.mode == "workflow"
+            mock_get_table.assert_called_once()

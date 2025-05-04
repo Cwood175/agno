@@ -30,8 +30,8 @@ def lance_db(mock_embedder):
     # Cleanup after test
     try:
         db.drop()
-    except Exception:
-        pass
+    except (OSError, ValueError) as exc:
+        pytest.fail(f"Failed to clean up LanceDB table: {exc}")
 
     if os.path.exists(TEST_PATH):
         shutil.rmtree(TEST_PATH)
