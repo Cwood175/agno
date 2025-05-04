@@ -202,7 +202,7 @@ class PostgresStorage(Storage):
                 table_without_indexes = Table(
                     self.table_name,
                     MetaData(schema=self.schema),
-                    *[c.copy() for c in self.table.columns],
+                    *[Column(c.name, c.type, nullable=c.nullable, default=c.default, schema=self.schema) for c in self.table.columns],
                     schema=self.schema,
                 )
                 table_without_indexes.create(self.db_engine, checkfirst=True)
@@ -263,7 +263,7 @@ class PostgresStorage(Storage):
                     return TeamSession.from_dict(result._mapping) if result is not None else None
                 elif self.mode == "workflow":
                     return WorkflowSession.from_dict(result._mapping) if result is not None else None
-        except Exception as e:
+        except ProgrammingError as e:
             if "does not exist" in str(e):
                 log_debug(f"Table does not exist: {self.table.name}")
                 log_debug("Creating table for future transactions")
@@ -302,7 +302,7 @@ class PostgresStorage(Storage):
                 # execute query
                 rows = sess.execute(stmt).fetchall()
                 return [row[0] for row in rows] if rows is not None else []
-        except Exception as e:
+        except ProgrammingError as e:
             log_debug(f"Exception reading from table: {e}")
             log_debug(f"Table does not exist: {self.table.name}")
             log_debug("Creating table for future transactions")
@@ -346,7 +346,7 @@ class PostgresStorage(Storage):
                         return [WorkflowSession.from_dict(row._mapping) for row in rows]  # type: ignore
                 else:
                     return []
-        except Exception as e:
+        except ProgrammingError as e:
             log_debug(f"Exception reading from table: {e}")
             log_debug(f"Table does not exist: {self.table.name}")
             log_debug("Creating table for future transactions")
@@ -387,7 +387,7 @@ class PostgresStorage(Storage):
                         sess.commit()
                         self._schema_up_to_date = True
                         log_info("Schema upgrade completed successfully")
-        except Exception as e:
+        except ProgrammingError as e:
             logger.error(f"Error during schema upgrade: {e}")
             raise
 
@@ -524,7 +524,7 @@ class PostgresStorage(Storage):
                     log_debug(f"No session found with session_id: {session_id}")
                 else:
                     log_debug(f"Successfully deleted session with session_id: {session_id}")
-        except Exception as e:
+        except ProgrammingError as e:
             logger.error(f"Error deleting session: {e}")
 
     def drop(self) -> None:

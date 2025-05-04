@@ -239,34 +239,31 @@ def test_get_count(milvus_db, mock_milvus_client):
 def test_distance_setting(mock_embedder, mock_milvus_client):
     """Test that distance settings are properly applied"""
     # Test with cosine distance (default)
-    with patch("pymilvus.MilvusClient", return_value=mock_milvus_client):
+    with patch("pymilvus.MilvusClient", return_value=mock_milvus_client), patch.object(db1, "exists", return_value=False):
         db1 = Milvus(embedder=mock_embedder, collection="test_collection")
         # Direct assignment to avoid real client creation
         db1._client = mock_milvus_client
-        with patch.object(db1, "exists", return_value=False):
-            db1.create()
-            args, kwargs = mock_milvus_client.create_collection.call_args
-            assert kwargs["metric_type"] == "COSINE"
+        db1.create()
+        kwargs = mock_milvus_client.create_collection.call_args[1]
+        assert kwargs["metric_type"] == "COSINE"
 
     # Test with L2 distance
-    with patch("pymilvus.MilvusClient", return_value=mock_milvus_client):
+    with patch("pymilvus.MilvusClient", return_value=mock_milvus_client), patch.object(db2, "exists", return_value=False):
         db2 = Milvus(embedder=mock_embedder, collection="test_collection", distance=Distance.l2)
         # Direct assignment to avoid real client creation
         db2._client = mock_milvus_client
-        with patch.object(db2, "exists", return_value=False):
-            db2.create()
-            args, kwargs = mock_milvus_client.create_collection.call_args
-            assert kwargs["metric_type"] == "L2"
+        db2.create()
+        kwargs = mock_milvus_client.create_collection.call_args[1]
+        assert kwargs["metric_type"] == "L2"
 
     # Test with inner product distance
-    with patch("pymilvus.MilvusClient", return_value=mock_milvus_client):
+    with patch("pymilvus.MilvusClient", return_value=mock_milvus_client), patch.object(db3, "exists", return_value=False):
         db3 = Milvus(embedder=mock_embedder, collection="test_collection", distance=Distance.max_inner_product)
         # Direct assignment to avoid real client creation
         db3._client = mock_milvus_client
-        with patch.object(db3, "exists", return_value=False):
-            db3.create()
-            args, kwargs = mock_milvus_client.create_collection.call_args
-            assert kwargs["metric_type"] == "IP"
+        db3.create()
+        kwargs = mock_milvus_client.create_collection.call_args[1]
+        assert kwargs["metric_type"] == "IP"
 
 
 def test_build_expr(milvus_db):

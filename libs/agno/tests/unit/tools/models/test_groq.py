@@ -43,7 +43,7 @@ def mock_groq_client():
         yield mock_client_instance
 
 
-@patch("agno.tools.toolkit.Toolkit.__init__", return_value=None)  # Mock base init
+@patch("agno.tools.toolkit.Toolkit.__init__", return_value=None)
 def test_groq_tools_init_success(mock_toolkit_init, mock_groq_client):
     """Test successful initialization with API key from env."""
     tools = GroqTools()
@@ -53,7 +53,6 @@ def test_groq_tools_init_success(mock_toolkit_init, mock_groq_client):
     assert tools.tts_model == "playai-tts"
     assert tools.tts_voice == "Chip-PlayAI"
     assert tools.tts_format == "wav"
-    mock_groq_client  # Ensure fixture is used
 
     # Check tool registration by looking at the tools attribute
     # NOTE: This check might be invalid now as we mocked the base init
@@ -133,7 +132,7 @@ def test_transcribe_audio_error(mock_exists, mock_toolkit_init, mock_transcribe_
     assert "API Error" in result
 
 
-@patch("agno.tools.toolkit.Toolkit.__init__", return_value=None)  # Mock base init
+@patch("agno.tools.toolkit.Toolkit.__init__", return_value=None)
 @patch("os.path.exists", return_value=False)
 def test_transcribe_audio_url(mock_exists, mock_toolkit_init, mock_groq_client):
     """Test transcribe_audio with a URL."""
@@ -244,7 +243,7 @@ def test_translate_audio_error_url(mock_exists, mock_toolkit_init, mock_translat
 # --- Test generate_speech ---
 
 
-@patch("agno.tools.toolkit.Toolkit.__init__", return_value=None)  # Mock base init
+@patch("agno.tools.toolkit.Toolkit.__init__", return_value=None)
 def test_generate_speech_success(mock_toolkit_init, mock_groq_client):
     """Test generate_speech successfully creates an audio artifact."""
     tools = GroqTools()
@@ -252,7 +251,6 @@ def test_generate_speech_success(mock_toolkit_init, mock_groq_client):
     mock_agent.add_audio = MagicMock()
     text_input = "Hello, this is a test."
 
-    # Mock the response object from client.audio.speech.create
     mock_speech_response = MagicMock()
     mock_speech_response.read.return_value = b"dummy_audio_bytes"
     mock_groq_client.audio.speech.create.return_value = mock_speech_response

@@ -188,7 +188,7 @@ def images_to_message(images: Sequence[Image]) -> List[Dict[str, Any]]:
             image_data = process_image(image)
             if image_data:
                 image_messages.append(image_data)
-        except Exception as e:
+        except (ValueError, TypeError, FileNotFoundError, OSError) as e:
             log_error(f"Failed to process image: {str(e)}")
             continue
 

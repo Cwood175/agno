@@ -1,5 +1,5 @@
 import json
-from typing import List
+from typing import list
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
@@ -258,9 +258,11 @@ async def test_async_create(mock_embedder):
     """Test async collection creation"""
     db = Weaviate(embedder=mock_embedder, collection="test_collection")
 
-    # Mock the async_create method directly rather than using AsyncMock
-    with patch.object(db, "async_create", return_value=None):
-        await db.async_create()
+    # Mock the async_create method using AsyncMock
+    async_create_mock = AsyncMock(return_value=None)
+    db.async_create = async_create_mock
+    await db.async_create()
+    async_create_mock.assert_awaited_once()
         # We can't make assertions about calls since we're not using AsyncMock
         # Just verify that it doesn't raise an exception
 
@@ -270,7 +272,9 @@ async def test_async_exists(mock_embedder):
     """Test async exists check"""
     db = Weaviate(embedder=mock_embedder, collection="test_collection")
 
-    # Mock the async_exists method directly
-    with patch.object(db, "async_exists", return_value=True):
-        result = await db.async_exists()
-        assert result is True
+    # Mock the async_exists method using AsyncMock
+    async_exists_mock = AsyncMock(return_value=True)
+    db.async_exists = async_exists_mock
+    result = await db.async_exists()
+    assert result is True
+    async_exists_mock.assert_awaited_once()

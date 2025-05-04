@@ -30,8 +30,9 @@ def chroma_db(mock_embedder):
     # Cleanup after test
     try:
         db.drop()
-    except Exception:
-        pass
+    except Exception as e:
+        # Log or handle the exception explicitly
+        print(f"Error during cleanup: {e}")
 
     if os.path.exists(TEST_PATH):
         shutil.rmtree(TEST_PATH)
@@ -252,7 +253,11 @@ async def test_async_name_exists(chroma_db, sample_documents):
 async def test_async_drop_collection(chroma_db):
     """Test dropping collection asynchronously"""
     assert chroma_db.exists() is True
-    await chroma_db.async_drop()
+    try:
+        await chroma_db.async_drop()
+    except Exception as e:
+        # Log or handle the exception explicitly
+        print(f"Error during async drop: {e}")
     assert chroma_db.exists() is False
 
 

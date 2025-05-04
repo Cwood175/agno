@@ -35,7 +35,7 @@ def confluence_tools(mock_confluence):
 
 
 # Initialization Tests
-def test_init_with_environment_variables():
+def test_init_with_environment_variables(mock_confluence):
     """Test initialization with environment variables."""
     with patch.dict(
         "os.environ",
@@ -51,7 +51,7 @@ def test_init_with_environment_variables():
         assert tools.password == "test_api_key"
 
 
-def test_init_with_constructor_parameters():
+def test_init_with_constructor_parameters(mock_confluence):
     """Test initialization with constructor parameters."""
     tools = ConfluenceTools(
         url="https://custom.atlassian.net",
@@ -63,7 +63,7 @@ def test_init_with_constructor_parameters():
     assert tools.password == "custom_api_key"
 
 
-def test_init_with_missing_credentials():
+def test_init_with_missing_credentials(mock_confluence):
     """Test initialization with missing credentials."""
     with patch.dict("os.environ", {}, clear=True):
         with pytest.raises(ValueError):

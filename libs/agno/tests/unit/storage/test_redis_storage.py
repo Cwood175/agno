@@ -1,4 +1,4 @@
-from typing import Dict
+from collections.abc import Dict
 from unittest.mock import ANY, MagicMock, patch
 
 import pytest
@@ -277,14 +277,14 @@ def test_serialization(agent_storage):
 def test_error_handling(agent_storage, mock_redis_client):
     """Test error handling during operations."""
     # Make Redis client raise an exception
-    mock_redis_client.get.side_effect = Exception("Test error")
+    mock_redis_client.get.side_effect = redis.RedisError("Test error")
 
     # Read should handle error and return None
     result = agent_storage.read("test-session")
     assert result is None
 
     # Get all sessions should handle error and return empty list
-    mock_redis_client.scan_iter.side_effect = Exception("Test error")
+    mock_redis_client.scan_iter.side_effect = redis.RedisError("Test error")
     result = agent_storage.get_all_sessions()
     assert result == []
 
@@ -293,17 +293,17 @@ def test_error_handling(agent_storage, mock_redis_client):
     assert result == []
 
     # Upsert should handle error and return None
-    mock_redis_client.set.side_effect = Exception("Test error")
+    mock_redis_client.set.side_effect = redis.RedisError("Test error")
     session = AgentSession(session_id="test-id", agent_id="test-agent", user_id="test-user")
     result = agent_storage.upsert(session)
     assert result is None
 
     # Delete should handle error without raising
-    mock_redis_client.delete.side_effect = Exception("Test error")
+    mock_redis_client.delete.side_effect = redis.RedisError("Test error")
     agent_storage.delete_session("test-id")  # Should not raise
 
     # Drop should handle error without raising
-    mock_redis_client.scan_iter.side_effect = Exception("Test error")
+    mock_redis_client.scan_iter.side_effect = redis.RedisError("Test error")
     agent_storage.drop()  # Should not raise
 
 

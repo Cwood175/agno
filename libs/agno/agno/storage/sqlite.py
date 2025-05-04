@@ -190,7 +190,7 @@ class SqliteStorage(Storage):
                 table_without_indexes = Table(
                     self.table_name,
                     MetaData(),
-                    *[c.copy() for c in self.table.columns],
+                    *[Column(c.name, c.type, nullable=c.nullable, default=c.default, primary_key=c.primary_key, unique=c.unique) for c in self.table.columns],
                 )
                 table_without_indexes.create(self.db_engine, checkfirst=True)
 
@@ -278,7 +278,7 @@ class SqliteStorage(Storage):
                 # execute query
                 rows = sess.execute(stmt).fetchall()
                 return [row[0] for row in rows] if rows is not None else []
-        except Exception as e:
+        except SQLAlchemyError as e:
             if "no such table" in str(e):
                 log_debug(f"Table does not exist: {self.table.name}")
                 self.create()
@@ -460,7 +460,7 @@ class SqliteStorage(Storage):
                     )
 
                 sess.execute(stmt)
-        except Exception as e:
+        except SQLAlchemyError as e:
             if create_and_retry and not self.table_exists():
                 log_debug(f"Table does not exist: {self.table.name}")
                 log_debug("Creating table and retrying upsert")
@@ -497,7 +497,7 @@ class SqliteStorage(Storage):
                     log_debug(f"No session found with session_id: {session_id}")
                 else:
                     log_debug(f"Successfully deleted session with session_id: {session_id}")
-        except Exception as e:
+        except SQLAlchemyError as e:
             logger.error(f"Error deleting session: {e}")
 
     def drop(self) -> None:

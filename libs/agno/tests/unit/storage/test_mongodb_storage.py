@@ -19,7 +19,7 @@ def mock_mongo_client():
 @pytest.fixture
 def agent_storage(mock_mongo_client):
     """Create a MongoDbStorage instance for agent mode with mocked components."""
-    mock_client, mock_collection = mock_mongo_client
+    _, mock_collection = mock_mongo_client
 
     storage = MongoDbStorage(collection_name="agent_sessions", db_name="test_db", mode="agent")
 
@@ -288,7 +288,6 @@ def test_mode_switching():
     with patch("agno.storage.mongodb.MongoClient") as mock_client:
         mock_collection = MagicMock()
         mock_client.return_value.__getitem__.return_value.__getitem__.return_value = mock_collection
-
         # Create storage in agent mode
         storage = MongoDbStorage(collection_name="test_collection")
         assert storage.mode == "agent"

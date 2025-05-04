@@ -120,7 +120,7 @@ def test_auth_with_expired_credentials():
             with patch("pathlib.Path.exists") as mock_exists:
                 mock_exists.return_value = False  # Force refresh path
                 tools._auth()
-                mock_refresh.assert_called_once()
+                mock_refresh.assert_called_once_with(ANY)
 
 
 def test_auth_with_custom_paths():
@@ -441,7 +441,7 @@ def test_multipart_complex_message(gmail_tools, mock_gmail_service):
     assert "test.pdf" in result
 
 
-def test_invalid_email_parameters():
+def test_invalid_email_parameters(gmail_tools, mock_gmail_service):
     """Test handling of invalid email parameters."""
     tools = GmailTools(creds=Mock(spec=Credentials, valid=True))
 
@@ -472,7 +472,7 @@ def test_invalid_email_parameters():
             )
 
 
-def test_service_initialization():
+def test_service_initialization(gmail_tools, mock_gmail_service):
     """Test that service is initialized only after successful authentication."""
     mock_creds = Mock(spec=Credentials)
     mock_creds.valid = True

@@ -1,6 +1,7 @@
 import uuid
 from hashlib import md5
-from typing import Any, Dict, Generator, List
+from collections.abc import Generator
+from typing import Any, Dict, List
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

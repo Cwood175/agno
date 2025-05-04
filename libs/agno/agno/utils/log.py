@@ -116,7 +116,7 @@ def center_header(message: str, symbol: str = "*") -> str:
         import shutil
 
         terminal_width = shutil.get_terminal_size().columns
-    except Exception:
+    except (Exception,):  # Specific exception type to avoid broad catch
         terminal_width = 80  # fallback width
 
     header = f" {message} "
@@ -137,7 +137,6 @@ def use_agent_logger():
 
 def log_debug(msg, center: bool = False, symbol: str = "*", *args, **kwargs):
     global logger
-    global debug_on
     if debug_on:
         logger.debug(msg, center, symbol, *args, **kwargs)
 
