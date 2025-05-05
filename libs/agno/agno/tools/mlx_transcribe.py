@@ -17,6 +17,7 @@ provides high-quality transcription capabilities.
 
 import json
 from pathlib import Path
+from __future__ import annotations
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from agno.tools import Toolkit
@@ -119,8 +120,12 @@ class MLXTranscribeTools(Toolkit):
 
             transcription = mlx_whisper.transcribe(audio_file_path, **transcription_kwargs)
             return transcription.get("text", "")
-        except Exception as e:
+        except FileNotFoundError as e:
             _e = f"Failed to transcribe audio file {e}"
+            logger.error(_e)
+            return _e
+        except Exception as e:
+            _e = f"An unexpected error occurred during transcription: {e}"
             logger.error(_e)
             return _e
 
@@ -133,6 +138,9 @@ class MLXTranscribeTools(Toolkit):
         try:
             log_info(f"Reading files in : {self.base_dir}")
             return json.dumps([str(file_name) for file_name in self.base_dir.iterdir()], indent=4)
-        except Exception as e:
+        except FileNotFoundError as e:
             logger.error(f"Error reading files: {e}")
             return f"Error reading files: {e}"
+        except Exception as e:
+            logger.error(f"An unexpected error occurred while reading files: {e}")
+            return f"An unexpected error occurred while reading files: {e}"

@@ -3,7 +3,8 @@ from dataclasses import asdict, dataclass
 from datetime import timedelta
 from os import environ
 from types import TracebackType
-from typing import Any, Dict, List, Literal, Optional, Union
+from __future__ import annotations
+from typing import Any, Dict, Literal, Optional, Union
 
 from agno.tools import Toolkit
 from agno.tools.function import Function
@@ -178,6 +179,12 @@ class MCPTools(Toolkit):
             if self.session is None:
                 raise ValueError("Session is not available. Use as context manager or provide a session.")
 
+            # Validate and sanitize include/exclude tools
+            if self.include_tools is not None and not isinstance(self.include_tools, list):
+                raise ValueError("include_tools must be a list of strings")
+            if self.exclude_tools is not None and not isinstance(self.exclude_tools, list):
+                raise ValueError("exclude_tools must be a list of strings")
+
             # Initialize the session if not already initialized
             await self.session.initialize()
 
@@ -274,10 +281,10 @@ class MultiMCPTools(Toolkit):
         if server_params_list is None and commands is None and urls is None:
             raise ValueError("Either server_params_list or commands or urls must be provided")
 
-        self.server_params_list: List[Union[SSEClientParams, StdioServerParameters]] = server_params_list or []
+        self.server_params_list: list[Union[SSEClientParams, StdioServerParameters]] = server_params_list or []
         self.timeout_seconds = timeout_seconds
-        self.commands: Optional[List[str]] = commands
-        self.urls: Optional[List[str]] = urls
+        self.commands: Optional[list[str]] = commands
+        self.urls: Optional[list[str]] = urls
 
         # Merge provided env with system env
         if env is not None:

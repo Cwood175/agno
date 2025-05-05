@@ -2,7 +2,8 @@ import json
 import uuid
 from hashlib import md5
 from os import getenv
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Annotated
+from __future__ import annotations
 
 try:
     from warnings import filterwarnings
@@ -237,7 +238,7 @@ class Weaviate(VectorDb):
         finally:
             await client.close()
 
-    def insert(self, documents: List[Document], filters: Optional[Dict[str, Any]] = None) -> None:
+    def insert(self, documents: list[Document], filters: Optional[dict[str, Any]] = None) -> None:
         """
         Insert documents into Weaviate.
 
@@ -272,7 +273,7 @@ class Weaviate(VectorDb):
             )
             log_debug(f"Inserted document: {document.name} ({document.meta_data})")
 
-    async def async_insert(self, documents: List[Document], filters: Optional[Dict[str, Any]] = None) -> None:
+    async def async_insert(self, documents: list[Document], filters: Optional[dict[str, Any]] = None) -> None:
         """
         Insert documents into Weaviate asynchronously.
 
@@ -322,7 +323,7 @@ class Weaviate(VectorDb):
         finally:
             await client.close()
 
-    def upsert(self, documents: List[Document], filters: Optional[Dict[str, Any]] = None) -> None:
+    def upsert(self, documents: list[Document], filters: Optional[dict[str, Any]] = None) -> None:
         """
         Upsert documents into Weaviate.
 
@@ -333,7 +334,7 @@ class Weaviate(VectorDb):
         log_debug(f"Upserting {len(documents)} documents into Weaviate.")
         self.insert(documents)
 
-    async def async_upsert(self, documents: List[Document], filters: Optional[Dict[str, Any]] = None) -> None:
+    async def async_upsert(self, documents: list[Document], filters: Optional[dict[str, Any]] = None) -> None:
         """
         Upsert documents into Weaviate asynchronously.
         When documents with the same ID already exist, they will be replaced.
@@ -447,7 +448,7 @@ class Weaviate(VectorDb):
             include_vector=True,
         )
 
-        search_results: List[Document] = self.get_search_results(response)
+        search_results: list[Document] = self.get_search_results(response)
 
         if self.reranker:
             search_results = self.reranker.rerank(query=query, documents=search_results)
@@ -492,7 +493,7 @@ class Weaviate(VectorDb):
 
         return search_results
 
-    def keyword_search(self, query: str, limit: int = 5) -> List[Document]:
+    def keyword_search(self, query: str, limit: int = 5) -> list[Document]:
         """
         Perform a keyword search in Weaviate.
 
@@ -512,7 +513,7 @@ class Weaviate(VectorDb):
             include_vector=True,
         )
 
-        search_results: List[Document] = self.get_search_results(response)
+        search_results: list[Document] = self.get_search_results(response)
 
         if self.reranker:
             search_results = self.reranker.rerank(query=query, documents=search_results)
@@ -552,7 +553,7 @@ class Weaviate(VectorDb):
 
         return search_results
 
-    def hybrid_search(self, query: str, limit: int = 5) -> List[Document]:
+    def hybrid_search(self, query: str, limit: int = 5) -> list[Document]:
         """
         Perform a hybrid search combining vector and keyword search in Weaviate.
 
@@ -696,11 +697,11 @@ class Weaviate(VectorDb):
         Returns:
             List[Document]: List of matching documents.
         """
-        search_results: List[Document] = []
+        search_results: list[Document] = []
         for obj in response.objects:
             properties = obj.properties
-            meta_data = json.loads(properties["meta_data"]) if properties.get("meta_data") else None
-            embedding = obj.vector["default"] if isinstance(obj.vector, dict) else obj.vector
+            meta_data = json.loads(properties["meta_data"]) if properties.get("meta_data") else {}
+            embedding = obj.vector.get("default") if isinstance(obj.vector, dict) else obj.vector
 
             search_results.append(
                 Document(

@@ -34,7 +34,7 @@ class ZoomTools(Toolkit):
         self.client_id = client_id or getenv("ZOOM_CLIENT_ID")
         self.client_secret = client_secret or getenv("ZOOM_CLIENT_SECRET")
         self.__access_token = None  # Made private
-        self.__token_expiry = None  # Track token expiration
+        self.__token_expiry: Optional[datetime] = None  # Track token expiration
 
         if not self.account_id or not self.client_id or not self.client_secret:
             logger.error(
@@ -250,6 +250,10 @@ class ZoomTools(Toolkit):
             logger.error("Unable to obtain access token.")
             return json.dumps({"error": "Failed to obtain access token"})
 
+        if not isinstance(meeting_id, str) or not meeting_id.isdigit():
+            logger.error(f"Invalid meeting_id format: {meeting_id}")
+            return json.dumps({"error": "Invalid meeting_id format"})
+
         url = f"https://api.zoom.us/v2/meetings/{meeting_id}/recordings"
         headers = {"Authorization": f"Bearer {token}"}
 
@@ -343,6 +347,10 @@ class ZoomTools(Toolkit):
             logger.error("Unable to obtain access token.")
             return json.dumps({"error": "Failed to obtain access token"})
 
+        if not isinstance(meeting_id, str) or not meeting_id.isdigit():
+            logger.error(f"Invalid meeting_id format: {meeting_id}")
+            return json.dumps({"error": "Invalid meeting_id format"})
+
         url = f"https://api.zoom.us/v2/meetings/{meeting_id}"
         headers = {"Authorization": f"Bearer {token}"}
 
@@ -377,4 +385,6 @@ class ZoomTools(Toolkit):
         Returns:
             A string containing instructions on how to use the ZoomTool.
         """
-        return "Use this tool to schedule and manage Zoom meetings. You can schedule meetings by providing a topic, start time, and duration."
+        return json.dumps({
+            "instructions": "Use this tool to schedule and manage Zoom meetings. You can schedule meetings by providing a topic, start time, and duration."
+        }, indent=2)

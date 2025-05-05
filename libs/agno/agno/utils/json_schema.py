@@ -1,4 +1,5 @@
-from typing import Any, Dict, Optional, Union, get_args, get_origin
+from typing import Any, Optional, Union, get_args, get_origin
+from typing import dict as Dict
 
 from agno.utils.log import logger
 
@@ -61,7 +62,8 @@ def get_json_schema_for_arg(t: Any) -> Optional[Dict[str, Any]]:
                     schema = get_json_schema_for_arg(arg)
                     if schema:
                         types.append(schema)
-                except Exception:
+                except Exception as e:
+                    logger.warning(f"Failed to generate schema for {arg}: {e}")
                     continue
             return {"anyOf": types} if types else None
 

@@ -1,6 +1,6 @@
 import os
 import uuid
-from typing import Optional, Union
+from typing import Optional
 
 import httpx
 

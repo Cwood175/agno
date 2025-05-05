@@ -137,8 +137,8 @@ def test_generate_image_success(mock_gemini_tools, mock_agent, mock_successful_r
         # Check if content is base64 encoded version of "fake_image_bytes"
         import base64
 
-        expected_base64_bytes = base64.b64encode(b"fake_image_bytes")  # Keep as bytes
-        assert added_artifact.content == expected_base64_bytes  # Compare bytes
+        expected_base64_str = base64.b64encode(b"fake_image_bytes").decode("utf-8")  # Convert to string for comparison
+        assert added_artifact.content == expected_base64_str  # Compare strings
 
 
 def test_generate_image_api_error(mock_gemini_tools, mock_agent):
@@ -221,8 +221,8 @@ def test_generate_video_success(mock_gemini_tools, mock_agent, mock_video_operat
         assert added.mime_type == "video/mp4"
         import base64
 
-        expected_content = base64.b64encode(b"fake_video_bytes").decode("utf-8")
-        assert added.content == expected_content
+        expected_content = base64.b64encode(b"fake_video_bytes")  # Keep as bytes
+        assert added.content == expected_content  # Compare bytes
 
 
 def test_generate_video_exception(mock_gemini_tools, mock_agent):

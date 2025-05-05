@@ -62,7 +62,7 @@ def milvus_db(mock_milvus_client, mock_embedder):
 
 
 @pytest.fixture
-def sample_documents() -> List[Document]:
+def sample_documents() -> list[Document]:
     """Fixture to create sample documents"""
     return [
         Document(
@@ -91,7 +91,7 @@ def test_create_collection(milvus_db, mock_milvus_client):
         mock_milvus_client.create_collection.assert_called_once()
 
         # Verify parameters
-        args, kwargs = mock_milvus_client.create_collection.call_args
+        kwargs = mock_milvus_client.create_collection.call_args[1]
         assert kwargs["collection_name"] == "test_collection"
         assert kwargs["dimension"] == milvus_db.dimensions
 
@@ -173,7 +173,7 @@ def test_upsert_documents(milvus_db, sample_documents, mock_milvus_client):
         assert mock_milvus_client.upsert.call_count == 3
 
         # Check the first call's parameters
-        args, kwargs = mock_milvus_client.upsert.call_args_list[0]
+        kwargs = mock_milvus_client.upsert.call_args_list[0][1]
         assert kwargs["collection_name"] == "test_collection"
         assert "vector" in kwargs["data"]
         assert "name" in kwargs["data"]
@@ -243,20 +243,20 @@ def test_distance_setting(mock_embedder, mock_milvus_client):
         db1 = Milvus(embedder=mock_embedder, collection="test_collection")
         # Direct assignment to avoid real client creation
         db1._client = mock_milvus_client
-        with patch.object(db1, "exists", return_value=False):
-            db1.create()
-            args, kwargs = mock_milvus_client.create_collection.call_args
-            assert kwargs["metric_type"] == "COSINE"
+    # Test with COSINE distance
+    with (patch("pymilvus.MilvusClient", return_value=mock_milvus_client),
+          patch.object(db1, "exists", return_value=False)):
+        db1.create()
+        assert mock_milvus_client.create_collection.call_args[1]["metric_type"] == "COSINE"
 
     # Test with L2 distance
-    with patch("pymilvus.MilvusClient", return_value=mock_milvus_client):
+    with (patch("pymilvus.MilvusClient", return_value=mock_milvus_client),
+          patch.object(db2, "exists", return_value=False)):
         db2 = Milvus(embedder=mock_embedder, collection="test_collection", distance=Distance.l2)
         # Direct assignment to avoid real client creation
         db2._client = mock_milvus_client
-        with patch.object(db2, "exists", return_value=False):
-            db2.create()
-            args, kwargs = mock_milvus_client.create_collection.call_args
-            assert kwargs["metric_type"] == "L2"
+        db2.create()
+        assert mock_milvus_client.create_collection.call_args[1]["metric_type"] == "L2"
 
     # Test with inner product distance
     with patch("pymilvus.MilvusClient", return_value=mock_milvus_client):
@@ -336,11 +336,11 @@ async def test_async_doc_exists(mock_embedder, mock_milvus_async_client):
 
     db._async_client = mock_milvus_async_client
 
-    with patch.object(mock_milvus_async_client, "get", side_effect=lambda **kwargs: async_return([Mock()])):
+    with (patch.object(mock_milvus_async_client, "get", side_effect=lambda **kwargs: async_return([Mock()]))):
         result = await db.async_doc_exists(test_doc)
         assert result is True
 
-    with patch.object(mock_milvus_async_client, "get", side_effect=lambda **kwargs: async_return([])):
+    with (patch.object(mock_milvus_async_client, "get", side_effect=lambda **kwargs: async_return([]))):
         result = await db.async_doc_exists(test_doc)
         assert result is False
 

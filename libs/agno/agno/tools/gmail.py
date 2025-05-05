@@ -109,7 +109,7 @@ class GmailTools(Toolkit):
         creds: Optional[Credentials] = None,
         credentials_path: Optional[str] = None,
         token_path: Optional[str] = None,
-        scopes: Optional[List[str]] = None,
+        scopes: Optional[list[str]] = None,
         **kwargs,
     ):
         """Initialize GmailTools and authenticate with Gmail API
@@ -129,7 +129,7 @@ class GmailTools(Toolkit):
             creds (Optional[Credentials]): Pre-existing credentials. Defaults to None.
             credentials_path (Optional[str]): Path to credentials file. Defaults to None.
             token_path (Optional[str]): Path to token file. Defaults to None.
-            scopes (Optional[List[str]]): Custom OAuth scopes. If None, uses DEFAULT_SCOPES.
+            scopes (Optional[list[str]]): Custom OAuth scopes. If None, uses DEFAULT_SCOPES.
         """
         super().__init__(name="gmail_tools", **kwargs)
         self.creds = creds
@@ -217,7 +217,7 @@ class GmailTools(Toolkit):
             if self.creds and self.creds.valid:
                 token_file.write_text(self.creds.to_json())
 
-    def _format_emails(self, emails: List[dict]) -> str:
+    def _format_emails(self, emails: list[dict]) -> str:
         """Format list of email dictionaries into a readable string"""
         if not emails:
             return "No emails found"
@@ -482,6 +482,8 @@ class GmailTools(Toolkit):
             return self._format_emails(emails)
         except HttpError as error:
             return f"Error retrieving emails with query '{query}': {error}"
+        except HttpError as error:
+            return f"Error retrieving emails with query '{query}': {error}"
         except Exception as error:
             return f"Unexpected error retrieving emails with query '{query}': {type(error).__name__}: {error}"
 
@@ -586,8 +588,8 @@ class GmailTools(Toolkit):
                         attachments.append(part["filename"])
             elif "body" in msg_data["payload"] and "data" in msg_data["payload"]["body"]:
                 body = base64.urlsafe_b64decode(msg_data["payload"]["body"]["data"]).decode()
-        except Exception:
-            return "Unable to decode message body"
+        except (KeyError, base64.binascii.Error) as error:
+            return f"Error decoding message body: {type(error).__name__}: {error}"
 
         if attachments:
             return f"{body}\n\nAttachments: {', '.join(attachments)}"

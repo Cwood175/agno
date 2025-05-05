@@ -1,5 +1,6 @@
 import uuid
 from hashlib import md5
+from __future__ import annotations
 from typing import Any, Dict, Generator, List
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -44,11 +45,11 @@ def mock_mongodb_client() -> Generator[MagicMock, None, None]:
 
         # Setup common collection methods
         mock_collection.create_search_index = MagicMock(return_value=None)
-        mock_collection.list_search_indexes = MagicMock(return_value=[{"name": "vector_index_1"}])
+        mock_collection.list_search_indexes = MagicMock(return_value=[{'name': 'vector_index_1'}])
         mock_collection.drop_search_index = MagicMock(return_value=None)
         mock_collection.aggregate = MagicMock(return_value=[])
         mock_collection.insert_many = MagicMock(return_value=None)
-        mock_collection.find_one = MagicMock(return_value=None)
+        mock_collection.find_one = AsyncMock(return_value=None)
         mock_collection.delete_many = MagicMock(return_value=MagicMock(deleted_count=1))
         mock_collection.drop = MagicMock()
 
@@ -58,7 +59,7 @@ def mock_mongodb_client() -> Generator[MagicMock, None, None]:
 class AsyncCursor:
     """Mock async cursor for MongoDB."""
 
-    def __init__(self, data: List[Dict[str, Any]]):
+    def __init__(self, data: list[dict[str, Any]]):
         self.data = data
         self.current = 0
 
@@ -96,7 +97,7 @@ def mock_async_mongodb_client() -> Generator[AsyncMock, None, None]:
 
         # Setup collection methods
         mock_collection.create_search_index = AsyncMock()
-        mock_collection.list_search_indexes = AsyncMock(return_value=[{"name": "vector_index_1"}])
+        mock_collection.list_search_indexes = AsyncMock(return_value=[{'name': 'vector_index_1'}])
         mock_collection.drop_search_index = AsyncMock()
 
         # Setup cursor for aggregate
@@ -194,11 +195,11 @@ def test_insert_and_search(vector_db: MongoDb, mock_mongodb_client: MagicMock, m
     # Setup mock response for search
     mock_search_result = [
         {
-            "_id": "doc_0",
-            "content": "This is test document 0",
-            "meta_data": {"type": "test", "index": "0"},
-            "name": "test_doc_0",
-            "score": 0.95,
+            '_id': 'doc_0',
+            'content': 'This is test document 0',
+            'meta_data': {'type': 'test', 'index': '0'},
+            'name': 'test_doc_0',
+            'score': 0.95,
         }
     ]
 

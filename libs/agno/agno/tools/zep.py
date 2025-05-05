@@ -280,8 +280,6 @@ class ZepAsyncTools(Toolkit):
         self.session_id: Optional[str] = None
         self.user_id: Optional[str] = None
 
-        self._initialized = False
-
         # Register methods as tools conditionally
         if add_zep_message:
             self.register(self.add_zep_message)
@@ -424,7 +422,7 @@ class ZepAsyncTools(Toolkit):
         if not self._initialized:
             await self.initialize()
 
-        results: List = []
+        results: list = []
         search_result = ""
 
         if not self.zep_client or not self.user_id or not self.session_id:
@@ -432,7 +430,7 @@ class ZepAsyncTools(Toolkit):
             return "Error: Zep client/user/session not initialized."
 
         try:
-            search_response: List[MemorySearchResult] = await self.zep_client.memory.search(
+            search_response: list[MemorySearchResult] = await self.zep_client.memory.search(
                 text=query, session_id=self.session_id, search_scope=search_scope
             )
 

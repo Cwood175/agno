@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from os import getenv
 from typing import Optional
@@ -91,6 +93,7 @@ class TrelloTools(Toolkit):
             return json.dumps({"id": card.id, "name": card.name, "url": card.url, "list": list_name})
 
         except Exception as e:
+            logger.error(f"Error creating card: {e}")
             return f"Error creating card: {e}"
 
     def get_board_lists(self, board_id: str) -> str:
@@ -142,6 +145,7 @@ class TrelloTools(Toolkit):
             return json.dumps({"success": True, "card_id": card_id, "new_list_id": list_id})
 
         except Exception as e:
+            logger.error(f"Error moving card: {e}")
             return f"Error moving card: {e}"
 
     def get_cards(self, list_id: str) -> str:
@@ -177,6 +181,7 @@ class TrelloTools(Toolkit):
             return json.dumps({"cards": cards_info})
 
         except Exception as e:
+            logger.error(f"Error getting cards: {e}")
             return f"Error getting cards: {e}"
 
     def create_board(self, name: str, default_lists: bool = False) -> str:
@@ -240,6 +245,7 @@ class TrelloTools(Toolkit):
             )
 
         except Exception as e:
+            logger.error(f"Error creating list: {e}")
             return f"Error creating list: {e}"
 
     def list_boards(self, board_filter: str = "all") -> str:

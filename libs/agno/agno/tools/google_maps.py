@@ -11,10 +11,11 @@ Prerequisites:
 
 """
 
+from __future__ import annotations
 import json
 from datetime import datetime
 from os import getenv
-from typing import List, Optional
+from typing import Optional
 
 from agno.tools import Toolkit
 
@@ -110,17 +111,17 @@ class GoogleMapTools(Toolkit):
         destination: str,
         mode: str = "driving",
         departure_time: Optional[datetime] = None,
-        avoid: Optional[List[str]] = None,
+        avoid: Optional[list[str]] = None,
     ) -> str:
         """
         Get directions between two locations using Google Maps Directions API.
 
         Args:
-            origin (str): Starting point address or coordinates
-            destination (str): Destination address or coordinates
+            origin: Starting point address or coordinates
+            destination: Destination address or coordinates
             mode (str, optional): Travel mode. Options: "driving", "walking", "bicycling", "transit". Defaults to "driving"
             departure_time (datetime, optional): Desired departure time for transit directions
-            avoid (List[str], optional): Features to avoid: "tolls", "highways", "ferries"
+            avoid (list[str], optional): Features to avoid: "tolls", "highways", "ferries"
 
         Returns:
             str: Stringified dictionary containing route information including steps, distance, duration, etc.
@@ -139,8 +140,8 @@ class GoogleMapTools(Toolkit):
         Validate an address using Google Maps Address Validation API.
 
         Args:
-            address (str): The address to validate
-            region_code (str): The region code (e.g., "US" for United States)
+            address: The address to validate
+            region_code: The region code (e.g., "US" for United States)
             locality (str, optional): The locality (city) to help with validation
             enable_usps_cass (bool): Whether to enable USPS CASS validation for US addresses
 
@@ -161,7 +162,7 @@ class GoogleMapTools(Toolkit):
         Convert an address into geographic coordinates using Google Maps Geocoding API.
 
         Args:
-            address (str): The address to geocode
+            address: The address to geocode
             region (str, optional): The region code to bias results
 
         Returns:
@@ -198,21 +199,21 @@ class GoogleMapTools(Toolkit):
 
     def get_distance_matrix(
         self,
-        origins: List[str],
-        destinations: List[str],
+        origins: list[str],
+        destinations: list[str],
         mode: str = "driving",
         departure_time: Optional[datetime] = None,
-        avoid: Optional[List[str]] = None,
+        avoid: Optional[list[str]] = None,
     ) -> str:
         """
         Calculate distance and time for a matrix of origins and destinations.
 
         Args:
-            origins (List[str]): List of addresses or coordinates
-            destinations (List[str]): List of addresses or coordinates
+            origins: List of addresses or coordinates
+            destinations: List of addresses or coordinates
             mode (str, optional): Travel mode. Options: "driving", "walking", "bicycling", "transit"
             departure_time (datetime, optional): Desired departure time
-            avoid (List[str], optional): Features to avoid: "tolls", "highways", "ferries"
+            avoid (list[str], optional): Features to avoid: "tolls", "highways", "ferries"
 
         Returns:
             str: Stringified dictionary containing distance and duration information
@@ -249,8 +250,8 @@ class GoogleMapTools(Toolkit):
         Get timezone information for a location using Google Maps Time Zone API.
 
         Args:
-            lat (float): Latitude
-            lng (float): Longitude
+            lat: Latitude
+            lng: Longitude
             timestamp (datetime, optional): The timestamp to use for timezone calculation
 
         Returns:
