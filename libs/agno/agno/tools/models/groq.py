@@ -31,7 +31,8 @@ class GroqTools(Toolkit):
             name="groq_tools", tools=[self.transcribe_audio, self.translate_audio, self.generate_speech], **kwargs
         )
 
-        self.api_key = api_key or getenv("GROQ_API_KEY")
+        import os
+        self.api_key = api_key or os.getenv("GROQ_API_KEY")
         if not self.api_key:
             raise ValueError("GROQ_API_KEY not set. Please set the GROQ_API_KEY environment variable.")
 
@@ -70,9 +71,12 @@ class GroqTools(Toolkit):
             log_debug(f"Transcript Generated: {transcription_text}")
             return transcription_text
 
-        except Exception as e:
+        except FileNotFoundError as e:
             log_error(f"Failed to transcribe audio source '{audio_source}' with Groq: {str(e)}")
             return f"Failed to transcribe audio source '{audio_source}' with Groq: {str(e)}"
+        except Exception as e:
+            log_error(f"An unexpected error occurred while transcribing audio: {str(e)}")
+            return f"An unexpected error occurred while transcribing audio: {str(e)}"
 
     def translate_audio(self, audio_source: str) -> str:
         """Translate audio file or URL to English using Groq's Whisper API.
@@ -101,9 +105,12 @@ class GroqTools(Toolkit):
             log_debug(f"Groq Translation: {translation}")
             return translation
 
-        except Exception as e:
+        except FileNotFoundError as e:
             log_error(f"Failed to translate audio source '{audio_source}' with Groq: {str(e)}")
             return f"Failed to translate audio source '{audio_source}' with Groq: {str(e)}"
+        except Exception as e:
+            log_error(f"An unexpected error occurred while translating audio: {str(e)}")
+            return f"An unexpected error occurred while translating audio: {str(e)}"
 
     def generate_speech(
         self,
@@ -147,5 +154,5 @@ class GroqTools(Toolkit):
             return f"Speech generated successfully with ID: {media_id}"
 
         except Exception as e:
-            log_error(f"Failed to generate speech with Groq: {str(e)}")
-            return f"Failed to generate speech with Groq: {str(e)}"
+            log_error(f"An unexpected error occurred while generating speech: {str(e)}")
+            return f"An unexpected error occurred while generating speech: {str(e)}"

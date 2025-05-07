@@ -1,6 +1,6 @@
 import json
 from os import getenv
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional, List
 
 from agno.tools import Toolkit
 from agno.utils.log import log_debug, log_info, logger
@@ -163,9 +163,13 @@ class ExaTools(Toolkit):
             if self.show_results:
                 log_info(parsed_results)
             return parsed_results
+        except APIException as e:
+            logger.error(f"API error while searching exa: {e}")
+            return f"Error: API failure - {e}"
         except Exception as e:
-            logger.error(f"Failed to search exa {e}")
-            return f"Error: {e}"
+            logger.error(f"Unexpected error while searching exa: {e}")
+            return f"Error: Unexpected failure - {e}"
+
 
     def get_contents(self, urls: list[str]) -> str:
         """
@@ -195,9 +199,13 @@ class ExaTools(Toolkit):
                 log_info(parsed_results)
 
             return parsed_results
+        except APIException as e:
+            logger.error(f"API error while fetching contents from Exa: {e}")
+            return f"Error: API failure - {e}"
         except Exception as e:
-            logger.error(f"Failed to get contents from Exa: {e}")
-            return f"Error: {e}"
+            logger.error(f"Unexpected error while fetching contents from Exa: {e}")
+            return f"Error: Unexpected failure - {e}"
+
 
     def find_similar(self, url: str, num_results: int = 5) -> str:
         """
@@ -235,9 +243,13 @@ class ExaTools(Toolkit):
                 log_info(parsed_results)
 
             return parsed_results
+        except APIException as e:
+            logger.error(f"API error while finding similar links from Exa: {e}")
+            return f"Error: API failure - {e}"
         except Exception as e:
-            logger.error(f"Failed to get similar links from Exa: {e}")
-            return f"Error: {e}"
+            logger.error(f"Unexpected error while finding similar links from Exa: {e}")
+            return f"Error: Unexpected failure - {e}"
+
 
     def exa_answer(self, query: str, text: bool = False) -> str:
         """
@@ -250,7 +262,7 @@ class ExaTools(Toolkit):
             str: The answer results in JSON format with both generated answer and sources.
         """
 
-        if self.model and self.model not in ["exa", "exa-pro"]:
+        if not self.model or self.model not in ["exa", "exa-pro"]:
             raise ValueError("Model must be either 'exa' or 'exa-pro'")
         try:
             if self.show_results:
@@ -279,7 +291,10 @@ class ExaTools(Toolkit):
                 log_info(json.dumps(result))
 
             return json.dumps(result, indent=4)
-
+        except APIException as e:
+            logger.error(f"API error while generating answer from Exa: {e}")
+            return f"Error: API failure - {e}"
         except Exception as e:
-            logger.error(f"Failed to get answer from Exa: {e}")
-            return f"Error: {e}"
+            logger.error(f"Unexpected error while generating answer from Exa: {e}")
+            return f"Error: Unexpected failure - {e}"
+

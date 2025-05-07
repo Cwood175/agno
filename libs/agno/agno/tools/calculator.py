@@ -21,7 +21,7 @@ class CalculatorTools(Toolkit):
         **kwargs,
     ):
         # Build the include_tools list based on enabled functions
-        tools: List[Callable] = []
+        tools: list[Callable] = []
         if add or enable_all:
             tools.append(self.add)
         if subtract or enable_all:
@@ -99,7 +99,7 @@ class CalculatorTools(Toolkit):
             return json.dumps({"operation": "division", "error": "Division by zero is undefined"})
         try:
             result = a / b
-        except Exception as e:
+        except ZeroDivisionError as e:
             return json.dumps({"operation": "division", "error": str(e), "result": "Error"})
         log_info(f"Dividing {a} by {b} to get {result}")
         return json.dumps({"operation": "division", "result": result})
@@ -114,7 +114,14 @@ class CalculatorTools(Toolkit):
         Returns:
             str: JSON string of the result.
         """
-        result = math.pow(a, b)
+        try:
+            result = math.pow(a, b)
+        except ValueError as e:
+            logger.error(f"Invalid input for exponentiation: {e}")
+            return json.dumps({"operation": "exponentiation", "error": str(e), "result": "Error"})
+        except Exception as e:
+            logger.error(f"Unexpected error during exponentiation: {e}")
+            return json.dumps({"operation": "exponentiation", "error": str(e), "result": "Error"})
         log_info(f"Raising {a} to the power of {b} to get {result}")
         return json.dumps({"operation": "exponentiation", "result": result})
 
@@ -130,6 +137,9 @@ class CalculatorTools(Toolkit):
         if n < 0:
             logger.error("Attempt to calculate factorial of a negative number")
             return json.dumps({"operation": "factorial", "error": "Factorial of a negative number is undefined"})
+        if not isinstance(n, int):
+            logger.error("Attempt to calculate factorial of a non-integer")
+            return json.dumps({"operation": "factorial", "error": "Factorial is defined only for non-negative integers"})
         result = math.factorial(n)
         log_info(f"Calculating factorial of {n} to get {result}")
         return json.dumps({"operation": "factorial", "result": result})
@@ -163,6 +173,10 @@ class CalculatorTools(Toolkit):
             logger.error("Attempt to calculate square root of a negative number")
             return json.dumps({"operation": "square_root", "error": "Square root of a negative number is undefined"})
 
-        result = math.sqrt(n)
+        try:
+            result = math.sqrt(n)
+        except ValueError as e:
+            logger.error(f"Invalid input for square root: {e}")
+            return json.dumps({"operation": "square_root", "error": str(e), "result": "Error"})
         log_info(f"Calculating square root of {n} to get {result}")
         return json.dumps({"operation": "square_root", "result": result})

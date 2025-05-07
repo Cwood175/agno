@@ -49,6 +49,12 @@ class GeminiTools(Toolkit):
             client_params["vertexai"] = True
             client_params["project"] = self.project_id or getenv("GOOGLE_CLOUD_PROJECT")
             client_params["location"] = self.location or getenv("GOOGLE_CLOUD_LOCATION")
+            if not self.project_id and not getenv("GOOGLE_CLOUD_PROJECT"):
+                log_error("Project ID not set. Please provide project_id or set the GOOGLE_CLOUD_PROJECT environment variable.")
+                raise ValueError("Project ID not set. Please provide project_id or set the GOOGLE_CLOUD_PROJECT environment variable.")
+            if not self.location and not getenv("GOOGLE_CLOUD_LOCATION"):
+                log_error("Location not set. Please provide location or set the GOOGLE_CLOUD_LOCATION environment variable.")
+                raise ValueError("Location not set. Please provide location or set the GOOGLE_CLOUD_LOCATION environment variable.")
         else:
             log_info("Using Gemini API")
             client_params["api_key"] = self.api_key
@@ -56,9 +62,12 @@ class GeminiTools(Toolkit):
         try:
             self.client = Client(**client_params)
             log_debug("Google GenAI Client created successfully.")
-        except Exception as e:
+        except ValueError as e:
             log_error(f"Failed to create Google GenAI Client: {e}", exc_info=True)
             raise ValueError(f"Failed to create Google GenAI Client. Error: {e}")
+        except Exception as e:
+            log_error(f"An unexpected error occurred: {e}", exc_info=True)
+            raise
 
         self.image_model = image_generation_model
         self.video_model = video_generation_model
@@ -106,9 +115,12 @@ class GeminiTools(Toolkit):
                 log_debug(f"Successfully generated image {media_id} with model {self.image_model}")
             return "Image generated successfully"
 
-        except Exception as e:
+        except ValueError as e:
             log_error(f"Failed to generate image: Client or method not available ({e})")
             return f"Failed to generate image: Client or method not available ({e})"
+        except Exception as e:
+            log_error(f"An unexpected error occurred while generating image: {e}", exc_info=True)
+            return f"Failed to generate image: An unexpected error occurred ({e})"
 
     def generate_video(
         self,
@@ -160,6 +172,9 @@ class GeminiTools(Toolkit):
                 )
                 log_debug(f"Successfully generated video {media_id} with model {self.video_model}")
             return "Video generated successfully"
-        except Exception as e:
+        except ValueError as e:
             log_error(f"Failed to generate video: {e}")
             return f"Failed to generate video: {e}"
+        except Exception as e:
+            log_error(f"An unexpected error occurred while generating video: {e}", exc_info=True)
+            return f"Failed to generate video: An unexpected error occurred ({e})"

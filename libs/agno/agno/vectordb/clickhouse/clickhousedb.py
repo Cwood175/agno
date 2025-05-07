@@ -55,8 +55,8 @@ class Clickhouse(VectorDb):
             )
 
         # Database attributes
-        self.client = client
-        self.async_client = asyncclient
+        self.client: clickhouse_connect.Client = client
+        self.async_client: clickhouse_connect.AsyncClient = asyncclient
         self.table_name = table_name
 
         # Embedder for embedding the document contents
@@ -106,7 +106,7 @@ class Clickhouse(VectorDb):
                     parameters=parameters,
                 )
             )
-        except Exception as e:
+        except clickhouse_connect.errors.ClickHouseError as e:
             logger.error(e)
             return False
 
@@ -122,6 +122,8 @@ class Clickhouse(VectorDb):
                 parameters=parameters,
             )
             return bool(result)
+        except clickhouse_connect.errors.ClickHouseError as e:
+            logger.error(e)
         except Exception as e:
             logger.error(f"Async error checking if table exists: {e}")
             return False
@@ -220,13 +222,17 @@ class Clickhouse(VectorDb):
             document (Document): Document to validate
         """
         cleaned_content = document.content.replace("\x00", "\ufffd")
-        parameters = self._get_base_parameters()
+        parameters: Dict[str, Any] = self._get_base_parameters()
         parameters["content_hash"] = md5(cleaned_content.encode()).hexdigest()
 
-        result = self.client.query(
-            "SELECT content_hash FROM {database_name:Identifier}.{table_name:Identifier} WHERE content_hash = {content_hash:String}",
-            parameters=parameters,
-        )
+        try:
+            result = self.client.query(
+                "SELECT content_hash FROM {database_name:Identifier}.{table_name:Identifier} WHERE content_hash = {content_hash:String}",
+                parameters=parameters,
+            )
+        except clickhouse_connect.errors.ClickHouseError as e:
+            logger.error(e)
+            return False
         return bool(result.result_rows)
 
     async def async_doc_exists(self, document: Document) -> bool:
@@ -250,9 +256,8 @@ class Clickhouse(VectorDb):
         Args:
             name (str): Name to check
         """
-        parameters = self._get_base_parameters()
+        parameters: Dict[str, Any] = self._get_base_parameters()
         parameters["name"] = name
-
         result = self.client.query(
             "SELECT name FROM {database_name:Identifier}.{table_name:Identifier} WHERE name = {name:String}",
             parameters=parameters,
@@ -393,7 +398,7 @@ class Clickhouse(VectorDb):
             parameters=parameters,
         )
 
-    async def async_upsert(self, documents: List[Document], filters: Optional[Dict[str, Any]] = None) -> None:
+    async def async_upsert(self, documents: list[Document], filters: dict[str, Any] | None = None) -> None:
         """Upsert documents asynchronously."""
         # We are using ReplacingMergeTree engine in our table, so we need to insert the documents,
         # then call SELECT with FINAL
@@ -405,7 +410,7 @@ class Clickhouse(VectorDb):
             parameters=parameters,
         )
 
-    def search(self, query: str, limit: int = 5, filters: Optional[Dict[str, Any]] = None) -> List[Document]:
+    def search(self, query: str, limit: int = 5, filters: dict[str, Any] | None = None) -> list[Document]:
         query_embedding = self.embedder.get_embedding(query)
         if query_embedding is None:
             logger.error(f"Error getting embedding for Query: {query}")
@@ -414,7 +419,7 @@ class Clickhouse(VectorDb):
         parameters = self._get_base_parameters()
         where_query = ""
         if filters:
-            query_filters: List[str] = []
+            query_filters: list[str] = []
             for key, value in filters.values():
                 query_filters.append(f"{{{key}_key:String}} = {{{key}_value:String}}")
                 parameters[f"{key}_key"] = key
@@ -442,14 +447,14 @@ class Clickhouse(VectorDb):
                 clickhouse_query,
                 parameters=parameters,
             )
-        except Exception as e:
+        except clickhouse_connect.errors.ClickHouseError as e:
             logger.error(f"Error searching for documents: {e}")
             logger.error("Table might not exist, creating for future use")
             self.create()
             return []
 
         # Build search results
-        search_results: List[Document] = []
+        search_results: list[Document] = []
         for result in results.result_rows:
             search_results.append(
                 Document(
@@ -506,14 +511,14 @@ class Clickhouse(VectorDb):
                 clickhouse_query,
                 parameters=parameters,
             )
-        except Exception as e:
+        except clickhouse_connect.errors.ClickHouseError as e:
             logger.error(f"Async error searching for documents: {e}")
             logger.error("Table might not exist, creating for future use")
             await self.async_create()
             return []
 
         # Build search results
-        search_results: List[Document] = []
+        search_results: list[Document] = []
         for result in results.result_rows:
             search_results.append(
                 Document(

@@ -51,6 +51,8 @@ def test_init_with_environment_variables():
         assert tools.password == "test_api_key"
 
 
+from __future__ import annotations
+
 def test_init_with_constructor_parameters():
     """Test initialization with constructor parameters."""
     tools = ConfluenceTools(

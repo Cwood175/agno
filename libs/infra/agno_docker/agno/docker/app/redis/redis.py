@@ -32,10 +32,10 @@ class Redis(DockerApp, DbApp):
     logging_level: str = "debug"
 
     def get_db_password(self) -> Optional[str]:
-        return self.db_password or self.get_secret_from_file("REDIS_PASSWORD")
+        return self.redis_password or self.get_secret_from_file("REDIS_PASSWORD")
 
     def get_db_database(self) -> Optional[str]:
-        return self.redis_schema or self.get_secret_from_file("REDIS_SCHEMA")
+        return self.get_db_database_local() or self.get_secret_from_file("REDIS_SCHEMA")
 
     def get_db_driver(self) -> Optional[str]:
         return self.redis_driver
@@ -44,7 +44,7 @@ class Redis(DockerApp, DbApp):
         return self.get_container_name()
 
     def get_db_port(self) -> Optional[int]:
-        return self.container_port
+        return self.port_number
 
     def get_db_connection(self) -> Optional[str]:
         password = self.get_db_password()
@@ -60,6 +60,6 @@ class Redis(DockerApp, DbApp):
         password_str = f"{password}@" if password else ""
         schema = self.get_db_database()
         driver = self.get_db_driver()
-        host = self.get_db_host_local()
-        port = self.get_db_port_local()
+        host = self.get_container_name()
+        port = self.port_number
         return f"{driver}://{password_str}{host}:{port}/{schema}"

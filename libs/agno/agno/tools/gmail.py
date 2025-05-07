@@ -41,6 +41,7 @@ A token.json file will be created to store the authentication credentials for fu
 """
 
 import base64
+from __future__ import annotations
 import re
 from datetime import datetime, timedelta
 from functools import wraps
@@ -503,12 +504,12 @@ class GmailTools(Toolkit):
 
     def _create_message(
         self,
-        to: List[str],
+        to: list[str],
         subject: str,
         body: str,
-        cc: Optional[List[str]] = None,
-        thread_id: Optional[str] = None,
-        message_id: Optional[str] = None,
+        cc: list[str] | None = None,
+        thread_id: str | None = None,
+        message_id: str | None = None,
     ) -> dict:
         body = body.replace("\\n", "\n")
         message = MIMEText(body, "html")

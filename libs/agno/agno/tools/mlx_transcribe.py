@@ -17,7 +17,7 @@ provides high-quality transcription capabilities.
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Union, tuple
 
 from agno.tools import Toolkit
 from agno.utils.log import log_info, logger
@@ -29,13 +29,15 @@ except ImportError:
 
 
 class MLXTranscribeTools(Toolkit):
+from __future__ import annotations
+
     def __init__(
         self,
         base_dir: Optional[Path] = None,
         read_files_in_base_dir: bool = True,
         path_or_hf_repo: str = "mlx-community/whisper-large-v3-turbo",
         verbose: Optional[bool] = None,
-        temperature: Optional[Union[float, Tuple[float, ...]]] = None,
+        temperature: Optional[Union[float, tuple[float, ...]]] = None,
         compression_ratio_threshold: Optional[float] = None,
         logprob_threshold: Optional[float] = None,
         no_speech_threshold: Optional[float] = None,
@@ -44,7 +46,7 @@ class MLXTranscribeTools(Toolkit):
         word_timestamps: Optional[bool] = None,
         prepend_punctuations: Optional[str] = None,
         append_punctuations: Optional[str] = None,
-        clip_timestamps: Optional[Union[str, List[float]]] = None,
+        clip_timestamps: Optional[Union[str, list[float]]] = None,
         hallucination_silence_threshold: Optional[float] = None,
         decode_options: Optional[dict] = None,
         **kwargs,
@@ -54,7 +56,7 @@ class MLXTranscribeTools(Toolkit):
         self.base_dir: Path = base_dir or Path.cwd()
         self.path_or_hf_repo: str = path_or_hf_repo
         self.verbose: Optional[bool] = verbose
-        self.temperature: Optional[Union[float, Tuple[float, ...]]] = temperature
+        self.temperature: Optional[Union[float, tuple[float, ...]]] = temperature
         self.compression_ratio_threshold: Optional[float] = compression_ratio_threshold
         self.logprob_threshold: Optional[float] = logprob_threshold
         self.no_speech_threshold: Optional[float] = no_speech_threshold
@@ -63,7 +65,7 @@ class MLXTranscribeTools(Toolkit):
         self.word_timestamps: Optional[bool] = word_timestamps
         self.prepend_punctuations: Optional[str] = prepend_punctuations
         self.append_punctuations: Optional[str] = append_punctuations
-        self.clip_timestamps: Optional[Union[str, List[float]]] = clip_timestamps
+        self.clip_timestamps: Optional[Union[str, list[float]]] = clip_timestamps
         self.hallucination_silence_threshold: Optional[float] = hallucination_silence_threshold
         self.decode_options: Optional[dict] = decode_options
 
@@ -119,10 +121,14 @@ class MLXTranscribeTools(Toolkit):
 
             transcription = mlx_whisper.transcribe(audio_file_path, **transcription_kwargs)
             return transcription.get("text", "")
-        except Exception as e:
-            _e = f"Failed to transcribe audio file {e}"
+        except FileNotFoundError as e:
+            _e = f"Audio file not found: {e}"
             logger.error(_e)
             return _e
+        except Exception as e:
+            _e = f"Unexpected error during transcription: {e}"
+            logger.error(_e)
+            raise
 
     def read_files(self) -> str:
         """Returns a list of files in the base directory

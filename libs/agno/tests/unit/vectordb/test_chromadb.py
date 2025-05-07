@@ -30,15 +30,15 @@ def chroma_db(mock_embedder):
     # Cleanup after test
     try:
         db.drop()
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Error during cleanup: {e}")
 
     if os.path.exists(TEST_PATH):
         shutil.rmtree(TEST_PATH)
 
 
 @pytest.fixture
-def sample_documents() -> List[Document]:
+def sample_documents() -> list[Document]:
     """Fixture to create sample documents"""
     return [
         Document(
@@ -98,7 +98,7 @@ def test_delete_collection(chroma_db, sample_documents):
     assert chroma_db.get_count() == 3
 
     assert chroma_db.delete() is True
-    assert chroma_db.exists() is False
+    assert await chroma_db.async_exists() is False
 
 
 def test_distance_metrics():
@@ -144,8 +144,8 @@ def test_error_handling(chroma_db):
     assert len(results) == 0
 
     # Test inserting empty document list
-    chroma_db.insert([])
-    assert chroma_db.get_count() == 0
+    with pytest.raises(ValueError):
+        chroma_db.insert([])
 
 
 def test_custom_embedder(mock_embedder):
@@ -187,12 +187,15 @@ def test_multiple_document_operations(chroma_db, sample_documents):
 async def test_async_create_collection(chroma_db):
     """Test creating a collection asynchronously"""
     # First delete the collection created by the fixture
-    chroma_db.delete()
+    try:
+        chroma_db.delete()
+    except Exception as e:
+        print(f"Error during async delete: {e}")
 
     # Test async create
     await chroma_db.async_create()
-    assert chroma_db.exists() is True
-    assert chroma_db.get_count() == 0
+    assert await chroma_db.async_exists() is True
+    assert await chroma_db.async_get_count() == 0
 
 
 @pytest.mark.asyncio
@@ -218,7 +221,7 @@ async def test_async_upsert_documents(chroma_db, sample_documents):
     """Test upserting documents asynchronously"""
     # Initial insert
     await chroma_db.async_insert([sample_documents[0]])
-    assert chroma_db.get_count() == 1
+    assert await chroma_db.async_get_count() == 1
 
     # Upsert same document with different content
     modified_doc = Document(
@@ -251,9 +254,9 @@ async def test_async_name_exists(chroma_db, sample_documents):
 @pytest.mark.asyncio
 async def test_async_drop_collection(chroma_db):
     """Test dropping collection asynchronously"""
-    assert chroma_db.exists() is True
+    assert await chroma_db.async_exists() is True
     await chroma_db.async_drop()
-    assert chroma_db.exists() is False
+    assert await chroma_db.async_exists() is False
 
 
 @pytest.mark.asyncio
@@ -263,7 +266,10 @@ async def test_async_exists(chroma_db):
     assert exists is True
 
     # Delete the collection
-    chroma_db.delete()
+    try:
+        await chroma_db.async_delete()
+    except Exception as e:
+        print(f"Error during async delete: {e}")
 
     exists = await chroma_db.async_exists()
     assert exists is False

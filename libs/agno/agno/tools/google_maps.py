@@ -14,7 +14,7 @@ Prerequisites:
 import json
 from datetime import datetime
 from os import getenv
-from typing import List, Optional
+from __future__ import annotations
 
 from agno.tools import Toolkit
 
@@ -100,7 +100,7 @@ class GoogleMapTools(Toolkit):
 
             return json.dumps(places)
 
-        except Exception as e:
+        except googlemaps.exceptions.ApiError as e:
             print(f"Error searching Google Maps: {str(e)}")
             return str([])
 
@@ -128,7 +128,7 @@ class GoogleMapTools(Toolkit):
         try:
             result = self.client.directions(origin, destination, mode=mode, departure_time=departure_time, avoid=avoid)
             return str(result)
-        except Exception as e:
+        except googlemaps.exceptions.ApiError as e:
             print(f"Error getting directions: {str(e)}")
             return str([])
 
@@ -152,7 +152,7 @@ class GoogleMapTools(Toolkit):
                 [address], regionCode=region_code, locality=locality, enableUspsCass=enable_usps_cass
             )
             return str(result)
-        except Exception as e:
+        except googlemaps.exceptions.ApiError as e:
             print(f"Error validating address: {str(e)}")
             return str({})
 
@@ -170,7 +170,7 @@ class GoogleMapTools(Toolkit):
         try:
             result = self.client.geocode(address, region=region)
             return str(result)
-        except Exception as e:
+        except googlemaps.exceptions.ApiError as e:
             print(f"Error geocoding address: {str(e)}")
             return str([])
 
@@ -240,7 +240,7 @@ class GoogleMapTools(Toolkit):
         try:
             result = self.client.elevation((lat, lng))
             return str(result)
-        except Exception as e:
+        except googlemaps.exceptions.ApiError as e:
             print(f"Error getting elevation: {str(e)}")
             return str([])
 
@@ -262,6 +262,6 @@ class GoogleMapTools(Toolkit):
 
             result = self.client.timezone(location=(lat, lng), timestamp=timestamp)
             return str(result)
-        except Exception as e:
+        except googlemaps.exceptions.ApiError as e:
             print(f"Error getting timezone: {str(e)}")
             return str({})
