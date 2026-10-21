@@ -124,16 +124,26 @@ class Qdrant(VectorDb):
         self.use_named_vectors = search_type in [SearchType.hybrid]
 
         if self.search_type in [SearchType.keyword, SearchType.hybrid]:
+            from typing import TYPE_CHECKING, Any
+
+            if TYPE_CHECKING:
+                # Import for type checking only to satisfy static analysers that may lack stubs
+                from fastembed import SparseTextEmbedding  # type: ignore
+            else:
+                try:
+                    from fastembed import SparseTextEmbedding
+                except Exception:
+                    # Fallback to Any at runtime if import fails; instantiation below will raise a clear error
+                    SparseTextEmbedding = Any  # type: ignore
+
+            default_kwargs = {"model_name": DEFAULT_SPARSE_MODEL}
+            if fastembed_kwargs:
+                default_kwargs.update(fastembed_kwargs)
+
             try:
-                from fastembed import SparseTextEmbedding
-
-                default_kwargs = {"model_name": DEFAULT_SPARSE_MODEL}
-                if fastembed_kwargs:
-                    default_kwargs.update(fastembed_kwargs)
-
                 self.sparse_encoder = SparseTextEmbedding(**default_kwargs)
-
-            except ImportError as e:
+            except Exception as e:
+                # Provide a clear runtime error if fastembed is not available or instantiation fails
                 raise ImportError(
                     "To use keyword/hybrid search, install the `fastembed` extra with `pip install 'qdrant-client[fastembed]'`."
                 ) from e
@@ -317,6 +327,16 @@ class Qdrant(VectorDb):
             cleaned_content = document.content.replace("\x00", "\ufffd")
             doc_id = md5(cleaned_content.encode()).hexdigest()
 
+            # Ensure dense embedding is present when needed
+            needs_dense = False
+            if self.search_type == SearchType.vector:
+                needs_dense = True
+            elif self.search_type == SearchType.hybrid:
+                needs_dense = True
+
+            if needs_dense and document.embedding is None:
+                document.embed(embedder=self.embedder)
+
             # TODO(v2.0.0): Remove conditional vector naming logic
             if self.use_named_vectors:
                 vector = {self.dense_vector_name: document.embedding}
@@ -325,13 +345,13 @@ class Qdrant(VectorDb):
 
             if self.search_type == SearchType.vector:
                 # For vector search, maintain backward compatibility with unnamed vectors
-                document.embed(embedder=self.embedder)
+                # embedding ensured above if needed
                 vector = document.embedding
             else:
                 # For other search types, use named vectors
                 vector = {}
                 if self.search_type in [SearchType.hybrid]:
-                    document.embed(embedder=self.embedder)
+                    # dense embedding ensured above if needed
                     vector[self.dense_vector_name] = document.embedding
 
                 if self.search_type in [SearchType.keyword, SearchType.hybrid]:
