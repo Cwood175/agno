@@ -2,9 +2,19 @@
 
 import json
 import os
+import sys
+import types
 from unittest.mock import Mock, patch
 
 import pytest
+
+# Provide a minimal fake 'firecrawl' module during test collection if the real package isn't installed.
+if "firecrawl" not in sys.modules:
+    fake_mod = types.ModuleType("firecrawl")
+    fake_mod.FirecrawlApp = Mock()
+    fake_mod.ScrapeOptions = Mock()
+    sys.modules["firecrawl"] = fake_mod
+
 from firecrawl import FirecrawlApp
 
 from agno.tools.firecrawl import FirecrawlTools
