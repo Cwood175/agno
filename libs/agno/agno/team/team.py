@@ -1457,7 +1457,7 @@ class Team:
             # Update the run_response content with the structured output
             run_response.content = model_response.parsed
             # Update the run_response content_type with the structured output class name
-            run_response.content_type = self.response_model.__name__
+            run_response.content_type = getattr(self.response_model, "__name__", None)
         else:
             # Update the run_response content with the model response content
             if not run_response.content:
@@ -1831,7 +1831,8 @@ class Team:
                 if model_response_event.content is not None:
                     if self.should_parse_structured_output:
                         full_model_response.content = model_response_event.content
-                        content_type = self.response_model.__name__
+                        # Use getattr to safely access __name__ in case response_model is None
+                        content_type = getattr(self.response_model, "__name__", "str")
                         run_response.content_type = content_type
                         self._convert_response_to_structured_format(full_model_response)
                     else:

@@ -2422,7 +2422,8 @@ class Agent:
                     if structured_output is not None:
                         run_response.content = structured_output
                         if hasattr(run_response, "content_type"):
-                            run_response.content_type = self.response_model.__name__
+                            response_model = cast(Type[BaseModel], self.response_model)
+                            run_response.content_type = response_model.__name__
                     else:
                         log_warning("Failed to convert response to response_model")
                 except Exception as e:
@@ -2722,7 +2723,8 @@ class Agent:
                 # Update the run_response content with the structured output
                 run_response.content = model_response.parsed
                 # Update the run_response content_type with the structured output class name
-                run_response.content_type = self.response_model.__name__
+                response_model = cast(Type[BaseModel], self.response_model)
+                run_response.content_type = response_model.__name__
         else:
             # Update the run_response content with the model response content
             run_response.content = model_response.content
@@ -3113,6 +3115,7 @@ class Agent:
         model_response_event: Union[ModelResponse, RunResponseEvent, TeamRunResponseEvent],
         reasoning_state: Dict[str, Any],
         stream_intermediate_steps: bool = False,
+        stream_model_response: bool = False,
     ) -> Iterator[RunResponseEvent]:
         if isinstance(model_response_event, tuple(get_args(RunResponseEvent))) or isinstance(
             model_response_event, tuple(get_args(TeamRunResponseEvent))
@@ -3129,7 +3132,8 @@ class Agent:
                 if model_response_event.content is not None:
                     if self.should_parse_structured_output:
                         model_response.content = model_response_event.content
-                        content_type = self.response_model.__name__
+                        response_model = cast(Type[BaseModel], self.response_model)
+                        content_type = response_model.__name__
                         run_response.content = model_response.content
                         run_response.content_type = content_type
                         self._convert_response_to_structured_format(model_response)
@@ -3789,11 +3793,12 @@ class Agent:
             elif self.model.supports_json_schema_outputs:
                 if self.use_json_mode or (not self.structured_outputs):
                     log_debug("Setting Model.response_format to JSON response mode")
+                    response_model = cast(Type[BaseModel], self.response_model)
                     return {
                         "type": "json_schema",
                         "json_schema": {
-                            "name": self.response_model.__name__,
-                            "schema": self.response_model.model_json_schema(),
+                            "name": response_model.__name__,
+                            "schema": response_model.model_json_schema(),
                         },
                     }
                 else:
