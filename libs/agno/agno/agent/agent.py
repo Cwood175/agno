@@ -1147,11 +1147,24 @@ class Agent:
         self._update_run_response(model_response=model_response, run_response=run_response, run_messages=run_messages)
 
         # 3. Add the run to memory
+        # Normalize messages to a list[dict] for memory/storage
+        messages_for_memory: Optional[List[Dict[str, Any]]] = None
+        if messages is not None:
+            messages_for_memory = []
+            for m in messages:
+                if isinstance(m, Message):
+                    messages_for_memory.append(m.to_dict())
+                elif isinstance(m, dict):
+                    messages_for_memory.append(m)
+                else:
+                    # fallback for strings or other types
+                    messages_for_memory.append({"content": m})
+
         self._add_run_to_memory(
             run_response=run_response,
             run_messages=run_messages,
             session_id=session_id,
-            messages=messages,
+            messages=messages_for_memory,
             index_of_last_user_message=index_of_last_user_message,
         )
 
@@ -1166,7 +1179,7 @@ class Agent:
             run_messages=run_messages,
             session_id=session_id,
             user_id=user_id,
-            messages=messages,
+            messages=messages_for_memory,
         )
 
         # 5. Calculate session metrics
@@ -1235,11 +1248,24 @@ class Agent:
             yield event
 
         # 3. Add the run to memory
+        # Normalize messages to a list[dict] for memory/storage
+        messages_for_memory: Optional[List[Dict[str, Any]]] = None
+        if messages is not None:
+            messages_for_memory = []
+            for m in messages:
+                if isinstance(m, Message):
+                    messages_for_memory.append(m.to_dict())
+                elif isinstance(m, dict):
+                    messages_for_memory.append(m)
+                else:
+                    # fallback for strings or other types
+                    messages_for_memory.append({"content": m})
+
         self._add_run_to_memory(
             run_response=run_response,
             run_messages=run_messages,
             session_id=session_id,
-            messages=messages,
+            messages=messages_for_memory,
             index_of_last_user_message=index_of_last_user_message,
         )
 
@@ -1256,7 +1282,7 @@ class Agent:
             run_messages=run_messages,
             session_id=session_id,
             user_id=user_id,
-            messages=messages,
+            messages=messages_for_memory,
         )
 
         # 5. Calculate session metrics
@@ -5205,7 +5231,7 @@ class Agent:
             log_warning(f"Error searching knowledge base: {e}")
             raise e
 
-    def convert_documents_to_string(self, docs: List[Dict[str, Any]]) -> str:
+    def convert_documents_to_string(self, docs: Optional[List[Union[Dict[str, Any], str]]]) -> str:
         if docs is None or len(docs) == 0:
             return ""
 

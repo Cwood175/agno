@@ -395,7 +395,7 @@ class Team:
         self.run_id: Optional[str] = None
         self.run_input: Optional[Union[str, List, Dict]] = None
         self.run_messages: Optional[RunMessages] = None
-        self.run_response: Optional[TeamRunResponse] = None
+        self.run_response: Optional[Union[TeamRunResponse, RunResponse]] = None
 
         # Images generated during this session
         self.images: Optional[List[ImageArtifact]] = None
@@ -2186,7 +2186,7 @@ class Team:
                 live_console.update(Group(*panels))
 
             # Run the agent
-            run_response: TeamRunResponse = self.run(  # type: ignore
+            run_response: Any = self.run(
                 message=message,
                 images=images,
                 audio=audio,
@@ -2504,6 +2504,10 @@ class Team:
             # Dict to track member response panels by member_id
             member_response_panels = {}
 
+            # Keep track of the last TeamRunResponse seen while streaming so we can safely reference
+            # team level fields (e.g., citations) after the loop even if the stream yields nothing.
+            last_resp: Optional[TeamRunResponse] = None
+
             for resp in stream_resp:
                 if team_markdown is None:
                     if markdown:
@@ -2515,6 +2519,9 @@ class Team:
                         team_markdown = False
 
                 if isinstance(resp, TeamRunResponse):
+                    # Remember the most recent team-level response
+                    last_resp = resp
+
                     if resp.event == RunEvent.run_response:
                         if isinstance(resp.content, str):
                             _response_content += resp.content
@@ -2697,11 +2704,11 @@ class Team:
 
             response_timer.stop()
 
-            # Add citations
-            if resp.citations is not None and resp.citations.urls is not None:
+            # Add citations (use last_resp which may be None if stream yielded nothing)
+            if last_resp is not None and last_resp.citations is not None and last_resp.citations.urls is not None:
                 md_content = "\n".join(
                     f"{i + 1}. [{citation.title or citation.url}]({citation.url})"
-                    for i, citation in enumerate(resp.citations.urls)
+                    for i, citation in enumerate(last_resp.citations.urls)
                     if citation.url  # Only include citations with valid URLs
                 )
                 if md_content:  # Only create panel if there are citations
@@ -2903,10 +2910,10 @@ class Team:
                 final_panels.append(response_panel)
 
             # Add team citations
-            if resp.citations is not None and resp.citations.urls is not None:
+            if last_resp is not None and last_resp.citations is not None and last_resp.citations.urls is not None:
                 md_content = "\n".join(
                     f"{i + 1}. [{citation.title or citation.url}]({citation.url})"
-                    for i, citation in enumerate(resp.citations.urls)
+                    for i, citation in enumerate(last_resp.citations.urls)
                     if citation.url  # Only include citations with valid URLs
                 )
                 if md_content:  # Only create panel if there are citations
@@ -3301,7 +3308,7 @@ class Team:
 
         stream_intermediate_steps = True  # With streaming print response, we need to stream intermediate steps
 
-        self.run_response = cast(TeamRunResponse, self.run_response)
+        # Do not force-cast self.run_response here; it may be None or different response type
 
         _response_content: str = ""
         _response_thinking: str = ""
@@ -4810,7 +4817,6 @@ class Team:
     ):
         # Get references from the knowledge base to use in the user message
         references = None
-        self.run_response = cast(RunResponse, self.run_response)
         if self.add_references and message:
             message_str: str
             if isinstance(message, str):
@@ -4830,12 +4836,13 @@ class Team:
                     references = MessageReferences(
                         query=message_str, references=docs_from_knowledge, time=round(retrieval_timer.elapsed, 4)
                     )
-                    # Add the references to the run_response
-                    if self.run_response.extra_data is None:
-                        self.run_response.extra_data = RunResponseExtraData()
-                    if self.run_response.extra_data.references is None:
-                        self.run_response.extra_data.references = []
-                    self.run_response.extra_data.references.append(references)
+                    # Add the references to the run_response if available
+                    if self.run_response is not None:
+                        if self.run_response.extra_data is None:
+                            self.run_response.extra_data = RunResponseExtraData()
+                        if self.run_response.extra_data.references is None:
+                            self.run_response.extra_data.references = []
+                        self.run_response.extra_data.references.append(references)
                 retrieval_timer.stop()
                 log_debug(f"Time to get references: {retrieval_timer.elapsed:.4f}s")
             except Exception as e:
@@ -6841,7 +6848,7 @@ class Team:
             log_warning(f"Error searching knowledge base: {e}")
             raise e
 
-    def _convert_documents_to_string(self, docs: List[Dict[str, Any]]) -> str:
+    def _convert_documents_to_string(self, docs: Optional[List[Union[Dict[str, Any], str]]]) -> str:
         if docs is None or len(docs) == 0:
             return ""
 
@@ -6894,7 +6901,6 @@ class Team:
                 str: A string containing the response from the knowledge base.
             """
             # Get the relevant documents from the knowledge base, passing filters
-            self.run_response = cast(TeamRunResponse, self.run_response)
             retrieval_timer = Timer()
             retrieval_timer.start()
             docs_from_knowledge = self.get_relevant_docs_from_knowledge(query=query, filters=knowledge_filters)
@@ -6902,12 +6908,15 @@ class Team:
                 references = MessageReferences(
                     query=query, references=docs_from_knowledge, time=round(retrieval_timer.elapsed, 4)
                 )
-                # Add the references to the run_response
-                if self.run_response.extra_data is None:
-                    self.run_response.extra_data = RunResponseExtraData()
-                if self.run_response.extra_data.references is None:
-                    self.run_response.extra_data.references = []
-                self.run_response.extra_data.references.append(references)
+                # Add the references to the run_response if available
+                if self.run_response is not None:
+                    if self.run_response.extra_data is None:
+                        self.run_response.extra_data = RunResponseExtraData()
+                    if self.run_response.extra_data.references is None:
+                        self.run_response.extra_data.references = []
+                    self.run_response.extra_data.references.append(references)
+                else:
+                    log_debug("No run_response available to attach references")
             retrieval_timer.stop()
             log_debug(f"Time to get references: {retrieval_timer.elapsed:.4f}s")
 
@@ -6924,7 +6933,6 @@ class Team:
             Returns:
                 str: A string containing the response from the knowledge base.
             """
-            self.run_response = cast(TeamRunResponse, self.run_response)
             retrieval_timer = Timer()
             retrieval_timer.start()
             docs_from_knowledge = await self.aget_relevant_docs_from_knowledge(query=query, filters=knowledge_filters)
@@ -6932,11 +6940,14 @@ class Team:
                 references = MessageReferences(
                     query=query, references=docs_from_knowledge, time=round(retrieval_timer.elapsed, 4)
                 )
-                if self.run_response.extra_data is None:
-                    self.run_response.extra_data = RunResponseExtraData()
-                if self.run_response.extra_data.references is None:
-                    self.run_response.extra_data.references = []
-                self.run_response.extra_data.references.append(references)
+                if self.run_response is not None:
+                    if self.run_response.extra_data is None:
+                        self.run_response.extra_data = RunResponseExtraData()
+                    if self.run_response.extra_data.references is None:
+                        self.run_response.extra_data.references = []
+                    self.run_response.extra_data.references.append(references)
+                else:
+                    log_debug("No run_response available to attach references")
             retrieval_timer.stop()
             log_debug(f"Time to get references: {retrieval_timer.elapsed:.4f}s")
 
@@ -6967,7 +6978,6 @@ class Team:
             search_filters = self._get_agentic_or_user_search_filters(filters, knowledge_filters)
 
             # Get the relevant documents from the knowledge base, passing filters
-            self.run_response = cast(TeamRunResponse, self.run_response)
             retrieval_timer = Timer()
             retrieval_timer.start()
             docs_from_knowledge = self.get_relevant_docs_from_knowledge(query=query, filters=search_filters)
@@ -6975,12 +6985,15 @@ class Team:
                 references = MessageReferences(
                     query=query, references=docs_from_knowledge, time=round(retrieval_timer.elapsed, 4)
                 )
-                # Add the references to the run_response
-                if self.run_response.extra_data is None:
-                    self.run_response.extra_data = RunResponseExtraData()
-                if self.run_response.extra_data.references is None:
-                    self.run_response.extra_data.references = []
-                self.run_response.extra_data.references.append(references)
+                # Add the references to the run_response if available
+                if self.run_response is not None:
+                    if self.run_response.extra_data is None:
+                        self.run_response.extra_data = RunResponseExtraData()
+                    if self.run_response.extra_data.references is None:
+                        self.run_response.extra_data.references = []
+                    self.run_response.extra_data.references.append(references)
+                else:
+                    log_debug("No run_response available to attach references")
             retrieval_timer.stop()
             log_debug(f"Time to get references: {retrieval_timer.elapsed:.4f}s")
 
@@ -7000,7 +7013,6 @@ class Team:
             """
             search_filters = self._get_agentic_or_user_search_filters(filters, knowledge_filters)
 
-            self.run_response = cast(TeamRunResponse, self.run_response)
             retrieval_timer = Timer()
             retrieval_timer.start()
             docs_from_knowledge = await self.aget_relevant_docs_from_knowledge(query=query, filters=search_filters)
@@ -7008,11 +7020,14 @@ class Team:
                 references = MessageReferences(
                     query=query, references=docs_from_knowledge, time=round(retrieval_timer.elapsed, 4)
                 )
-                if self.run_response.extra_data is None:
-                    self.run_response.extra_data = RunResponseExtraData()
-                if self.run_response.extra_data.references is None:
-                    self.run_response.extra_data.references = []
-                self.run_response.extra_data.references.append(references)
+                if self.run_response is not None:
+                    if self.run_response.extra_data is None:
+                        self.run_response.extra_data = RunResponseExtraData()
+                    if self.run_response.extra_data.references is None:
+                        self.run_response.extra_data.references = []
+                    self.run_response.extra_data.references.append(references)
+                else:
+                    log_debug("No run_response available to attach references")
             retrieval_timer.stop()
             log_debug(f"Time to get references: {retrieval_timer.elapsed:.4f}s")
 
