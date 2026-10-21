@@ -4180,22 +4180,24 @@ class Agent:
             return
 
         agent_session_from_db = self.storage.read(session_id=session_id)
-        if (
-            agent_session_from_db is not None
-            and agent_session_from_db.memory is not None
-            and "runs" in agent_session_from_db.memory  # type: ignore
-        ):
+        # Guard attribute access on union types returned from storage.read
+        memory_from_db = None
+        if agent_session_from_db is not None:
+            memory_from_db = getattr(agent_session_from_db, "memory", None)
+
+        if memory_from_db is not None and isinstance(memory_from_db, dict) and "runs" in memory_from_db:
             if isinstance(self.memory, AgentMemory):
                 return
             try:
-                if self.memory.runs is None:  # type: ignore
+                if getattr(self.memory, "runs", None) is None:  # type: ignore
                     self.memory.runs = {}  # type: ignore
                 if session_id not in self.memory.runs:  # type: ignore
                     self.memory.runs[session_id] = []  # type: ignore
-                for run in agent_session_from_db.memory["runs"]:  # type: ignore
+                for run in memory_from_db["runs"]:  # type: ignore
                     run_session_id = run["session_id"]
                     skip = False
-                    for existing_run in self.memory.runs[run_session_id]:  # type: ignore
+                    existing_runs = self.memory.runs.get(run_session_id, [])  # type: ignore
+                    for existing_run in existing_runs:  # type: ignore
                         if existing_run.run_id == run["run_id"]:
                             skip = True
                             break
