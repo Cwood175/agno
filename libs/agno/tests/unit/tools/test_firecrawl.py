@@ -5,9 +5,22 @@ import os
 from unittest.mock import Mock, patch
 
 import pytest
-from firecrawl import FirecrawlApp
 
-from agno.tools.firecrawl import FirecrawlTools
+try:
+    from firecrawl import FirecrawlApp
+except Exception:
+    # Avoid import-time failures during test collection if the installed
+    # 'firecrawl' package is not the expected one. Tests should patch this
+    # symbol as needed.
+    FirecrawlApp = None
+
+try:
+    from agno.tools.firecrawl import FirecrawlTools
+except Exception:
+    # Avoid import-time ImportError raised by agno.tools.firecrawl when
+    # 'firecrawl-py' is not installed. Tests will patch or import the real
+    # implementation when needed.
+    FirecrawlTools = None
 
 TEST_API_KEY = os.environ.get("FIRECRAWL_API_KEY", "test_api_key")
 TEST_API_URL = "https://api.firecrawl.dev"
