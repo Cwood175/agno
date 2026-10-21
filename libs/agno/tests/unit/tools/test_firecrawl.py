@@ -2,10 +2,27 @@
 
 import json
 import os
+import sys
+import types
 from unittest.mock import Mock, patch
 
 import pytest
-from firecrawl import FirecrawlApp
+
+try:
+    from firecrawl import FirecrawlApp
+except Exception:
+    # Provide a minimal stub module so importing agno.tools.firecrawl won't fail at import time
+    fake_firecrawl = types.ModuleType("firecrawl")
+
+    class FirecrawlApp:  # stub
+        pass
+
+    class ScrapeOptions:  # stub in case it's imported by agno.tools.firecrawl
+        pass
+
+    fake_firecrawl.FirecrawlApp = FirecrawlApp
+    fake_firecrawl.ScrapeOptions = ScrapeOptions
+    sys.modules["firecrawl"] = fake_firecrawl
 
 from agno.tools.firecrawl import FirecrawlTools
 
