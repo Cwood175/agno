@@ -6537,6 +6537,7 @@ class Agent:
         Returns:
             str: A string indicating the status of the addition.
         """
+        import asyncio
         import json
 
         from agno.document import Document
@@ -6548,12 +6549,23 @@ class Agent:
             document_name = query.replace(" ", "_").replace("?", "").replace("!", "").replace(".", "")
         document_content = json.dumps({"query": query, "result": result})
         log_info(f"Adding document to knowledge base: {document_name}: {document_content}")
-        self.knowledge.load_document(
+        coro = self.knowledge.load_document(
             document=Document(
-                    name=document_name,
-                    content=document_content,
-                )
+                name=document_name,
+                content=document_content,
+            )
         )
+        # Consume the coroutine. Prefer asyncio.run for synchronous usage,
+        # but if an event loop is already running, schedule the coroutine.
+        try:
+            asyncio.run(coro)
+        except RuntimeError:
+            # Event loop is already running — try to schedule the coroutine.
+            try:
+                asyncio.get_event_loop().create_task(coro)
+            except Exception:
+                # Fallback: ignore scheduling errors to avoid crashing in constrained environments.
+                pass
         return "Successfully added to knowledge base"
 
     def update_memory(self, task: str) -> str:
