@@ -64,7 +64,6 @@ def run_team(team: Team, input: RunAgentInput) -> Iterator[BaseEvent]:
             messages=messages,
             session_id=input.thread_id,
             stream=True,
-            stream_intermediate_steps=True,
         )
 
         # Stream the response content in AG-UI format
