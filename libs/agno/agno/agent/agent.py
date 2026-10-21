@@ -1113,7 +1113,7 @@ class Agent:
                     if self.stream and self.stream is True:
                         log_debug("Setting stream=False as response_model is set")
                         self.stream = False
-                    run_response: RunResponse = next(
+                    run_response = next(
                         self._run(
                             message=message,
                             stream=False,
@@ -1728,7 +1728,7 @@ class Agent:
         for attempt in range(num_attempts):
             try:
                 # Create a new run_response for this attempt
-                run_response = RunResponse(run_id=run_id, session_id=session_id, agent_id=self.agent_id)
+                attempt_run_response = RunResponse(run_id=run_id, session_id=session_id, agent_id=self.agent_id)
 
                 # If a response_model is set, return the response as a structured output
                 if self.response_model is not None and self.parse_response:
@@ -1748,7 +1748,7 @@ class Agent:
                         files=files,
                         messages=messages,
                         stream_intermediate_steps=stream_intermediate_steps,
-                        run_response=run_response,
+                        run_response=attempt_run_response,
                         **kwargs,
                     )
                     resp = await generator.__anext__()
@@ -1787,7 +1787,7 @@ class Agent:
                             files=files,
                             messages=messages,
                             stream_intermediate_steps=stream_intermediate_steps,
-                            run_response=run_response,
+                            run_response=attempt_run_response,
                             **kwargs,
                         )
                         return async_generator
@@ -1803,7 +1803,7 @@ class Agent:
                             files=files,
                             messages=messages,
                             stream_intermediate_steps=stream_intermediate_steps,
-                            run_response=run_response,
+                            run_response=attempt_run_response,
                             **kwargs,
                         )
                         return await generator.__anext__()
@@ -1851,7 +1851,7 @@ class Agent:
         content_type: Optional[str] = None,
         created_at: Optional[int] = None,
         citations: Optional[Citations] = None,
-        run_response: Optional[RunResponse] = None,
+        base_run_response: Optional[RunResponse] = None,
     ) -> RunResponse:
         thinking_combined = (thinking or "") + (redacted_thinking or "")
 
@@ -1864,19 +1864,19 @@ class Agent:
         messages = None
         extra_data = None
 
-        if run_response:
-            model = run_response.model
-            messages = run_response.messages
-            extra_data = run_response.extra_data
-            content = run_response.content
-            content_type = run_response.content_type
-            audio = run_response.audio
-            images = run_response.images
-            videos = run_response.videos
-            response_audio = run_response.response_audio
-            citations = run_response.citations
-            tools = run_response.tools
-            reasoning_content = run_response.reasoning_content
+        if base_run_response:
+            model = base_run_response.model
+            messages = base_run_response.messages
+            extra_data = base_run_response.extra_data
+            content = base_run_response.content
+            content_type = base_run_response.content_type
+            audio = base_run_response.audio
+            images = base_run_response.images
+            videos = base_run_response.videos
+            response_audio = base_run_response.response_audio
+            citations = base_run_response.citations
+            tools = base_run_response.tools
+            reasoning_content = base_run_response.reasoning_content
 
         rr = RunResponse(
             run_id=self.run_id,
