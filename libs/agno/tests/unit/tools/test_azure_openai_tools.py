@@ -172,7 +172,8 @@ def test_generate_image_failure(mock_post, azure_openai_tools, mock_agent):
     mock_agent.add_image.assert_not_called()
 
 
-def test_generate_image_missing_credentials(azure_openai_tools, mock_agent):
+@patch("agno.tools.azure_openai.post")
+def test_generate_image_missing_credentials(mock_post, azure_openai_tools, mock_agent):
     """Test image generation with missing credentials."""
     # Remove the required environment variables
     with patch.dict(
@@ -193,6 +194,8 @@ def test_generate_image_missing_credentials(azure_openai_tools, mock_agent):
 
     # Make sure no API call was made and no image was added
     mock_agent.add_image.assert_not_called()
+    # Ensure the external post was not invoked to prevent real network calls
+    mock_post.assert_not_called()
 
 
 def test_invalid_parameters(azure_openai_tools, mock_agent):
