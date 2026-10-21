@@ -5,10 +5,20 @@ from typing import Any, Dict, List, Optional
 from agno.tools import Toolkit
 from agno.utils.log import logger
 
+# Import FirecrawlApp first and then handle ScrapeOptions which may be named differently
 try:
-    from firecrawl import FirecrawlApp, ScrapeOptions  # type: ignore[attr-defined]
-except ImportError:
-    raise ImportError("`firecrawl-py` not installed. Please install using `pip install firecrawl-py`")
+    from firecrawl import FirecrawlApp  # type: ignore[attr-defined]
+except ImportError as e:
+    raise ImportError("`firecrawl-py` not installed. Please install using `pip install firecrawl-py`") from e
+
+# ScrapeOptions has been renamed in some versions (e.g. V1ScrapeOptions). Try a fallback and preserve original error.
+try:
+    from firecrawl import ScrapeOptions  # type: ignore[attr-defined]
+except ImportError as e:
+    try:
+        from firecrawl import V1ScrapeOptions as ScrapeOptions  # type: ignore[attr-defined]
+    except ImportError:
+        raise ImportError(f"firecrawl missing required symbol 'ScrapeOptions' (original error: {e})") from e
 
 
 class CustomJSONEncoder(json.JSONEncoder):
