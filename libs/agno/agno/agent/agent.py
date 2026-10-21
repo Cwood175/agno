@@ -1419,15 +1419,27 @@ class Agent:
         for attempt in range(num_attempts):
             try:
                 # Set run_input
+                import json
+
                 if message is not None:
                     if isinstance(message, str):
                         self.run_input = message
                     elif isinstance(message, Message):
-                        self.run_input = message.to_dict()
+                        try:
+                            self.run_input = json.dumps(message.to_dict())
+                        except Exception:
+                            self.run_input = str(message.to_dict())
                     else:
-                        self.run_input = message
+                        try:
+                            self.run_input = json.dumps(message)
+                        except Exception:
+                            self.run_input = str(message)
                 elif messages is not None:
-                    self.run_input = [m.to_dict() if isinstance(m, Message) else m for m in messages]
+                    try:
+                        msg_list = [m.to_dict() if isinstance(m, Message) else m for m in messages]
+                        self.run_input = json.dumps(msg_list)
+                    except Exception:
+                        self.run_input = str([m.to_dict() if isinstance(m, Message) else m for m in messages])
 
                 # Prepare run messages
                 run_messages: RunMessages = self.get_run_messages(
@@ -5609,9 +5621,9 @@ class Agent:
         step_content += "\n"
 
         # Get the current reasoning_content and append this step
-        current_reasoning_content = ""
+        current_reasoning_content: str = ""
         if hasattr(self.run_response, "reasoning_content") and self.run_response.reasoning_content:  # type: ignore
-            current_reasoning_content = self.run_response.reasoning_content  # type: ignore
+            current_reasoning_content = str(self.run_response.reasoning_content)  # type: ignore
 
         # Create updated reasoning_content
         updated_reasoning_content = current_reasoning_content + step_content

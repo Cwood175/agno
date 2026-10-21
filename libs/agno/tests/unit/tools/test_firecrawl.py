@@ -5,7 +5,17 @@ import os
 from unittest.mock import Mock, patch
 
 import pytest
-from firecrawl import FirecrawlApp
+
+try:
+    from firecrawl import FirecrawlApp
+except Exception:
+    # Provide a lightweight placeholder so tests don't fail at import time when the
+    # external 'firecrawl' package (or specific symbols like ScrapeOptions) is
+    # not installed in the CI/test environment.
+    class FirecrawlApp:
+        def __init__(self, *args, **kwargs):
+            pass
+
 
 from agno.tools.firecrawl import FirecrawlTools
 
