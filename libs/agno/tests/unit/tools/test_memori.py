@@ -3,7 +3,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from agno.tools.memori import MemoriTools, create_memori_search_tool
+try:
+    from agno.tools.memori import MemoriTools, create_memori_search_tool
+except ImportError as e:
+    pytest.skip(f"Skipping memori tests because memori dependency is not available: {e}", allow_module_level=True)
 
 MockMemori = MagicMock()
 MockCreateMemoryTool = MagicMock()

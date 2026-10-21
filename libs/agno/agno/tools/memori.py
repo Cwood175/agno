@@ -6,9 +6,19 @@ from agno.tools.toolkit import Toolkit
 from agno.utils.log import log_debug, log_error, log_info, log_warning
 
 try:
-    from memori import Memori, create_memory_tool
-except ImportError:
-    raise ImportError("`memorisdk` package not found. Please install it with `pip install memorisdk`")
+    import memori as _memori
+except Exception as e:
+    raise ImportError("`memorisdk` package not found. Please install it with `pip install memorisdk`") from e
+
+try:
+    Memori = _memori.Memori
+    create_memory_tool = _memori.create_memory_tool
+except AttributeError as e:
+    raise ImportError(
+        "Imported 'memori' package does not expose expected symbols 'Memori' and 'create_memory_tool'. "
+        "This may be an incompatible or different package named 'memori'. "
+        "Please install the correct package/version (for example: pip install memorisdk)."
+    ) from e
 
 
 class MemoriTools(Toolkit):
