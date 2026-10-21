@@ -78,7 +78,7 @@ async def get_media_async(media_id: str) -> dict:
             response = await client.get(media_url, headers=headers)
             response.raise_for_status()  # Raise an HTTPError for bad responses (4xx and 5xx)
             data = response.content
-        return data
+        return {"content": data}
     except httpx.HTTPStatusError as e:
         return {"error": str(e)}
 

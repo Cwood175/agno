@@ -291,7 +291,9 @@ def test_read_invalid_mode():
 @pytest.mark.asyncio
 async def test_async_scrape_basic(mock_scrape_response):
     """Test basic async scraping functionality"""
-    with patch("asyncio.to_thread") as mock_to_thread, patch("firecrawl.FirecrawlApp") as MockFirecrawlApp:
+    with patch("asyncio.to_thread") as mock_to_thread, patch(
+        "agno.document.reader.firecrawl_reader.FirecrawlApp"
+    ) as MockFirecrawlApp:
         # Configure mock to return the expected result
         mock_app = MockFirecrawlApp.return_value
         mock_app.scrape_url.return_value = mock_scrape_response
@@ -319,7 +321,9 @@ async def test_async_scrape_basic(mock_scrape_response):
 @pytest.mark.asyncio
 async def test_async_crawl_basic(mock_crawl_response):
     """Test basic async crawling functionality"""
-    with patch("asyncio.to_thread") as mock_to_thread, patch("firecrawl.FirecrawlApp") as MockFirecrawlApp:
+    with patch("asyncio.to_thread") as mock_to_thread, patch(
+        "agno.document.reader.firecrawl_reader.FirecrawlApp"
+    ) as MockFirecrawlApp:
         # Configure mock for crawl
         mock_app = MockFirecrawlApp.return_value
         mock_app.crawl_url.return_value = mock_crawl_response
