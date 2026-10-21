@@ -1911,6 +1911,7 @@ class Team:
 
     def _initialize_session_state(self, user_id: Optional[str] = None, session_id: Optional[str] = None) -> None:
         self.session_state = self.session_state or {}
+        self.team_session_state = self.team_session_state or {}
         if user_id is not None:
             self.session_state["current_user_id"] = user_id
             self.team_session_state["current_user_id"] = user_id
@@ -6244,9 +6245,15 @@ class Team:
                     try:
                         if self.memory.runs is None:
                             self.memory.runs = {}
+                        # Ensure mypy knows self.memory.runs is not Optional
+                        assert self.memory.runs is not None
+                        # Initialize list for the current session
                         self.memory.runs[session.session_id] = []
                         for run in session.memory["runs"]:
                             run_session_id = run["session_id"]
+                            # Ensure list exists for the run_session_id
+                            if run_session_id not in self.memory.runs:
+                                self.memory.runs[run_session_id] = []
                             if "team_id" in run:
                                 self.memory.runs[run_session_id].append(TeamRunResponse.from_dict(run))
                             else:
