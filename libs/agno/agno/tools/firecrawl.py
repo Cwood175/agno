@@ -6,9 +6,17 @@ from agno.tools import Toolkit
 from agno.utils.log import logger
 
 try:
-    from firecrawl import FirecrawlApp, ScrapeOptions  # type: ignore[attr-defined]
-except ImportError:
-    raise ImportError("`firecrawl-py` not installed. Please install using `pip install firecrawl-py`")
+    from firecrawl import FirecrawlApp  # type: ignore[attr-defined]
+except ImportError as e:
+    raise ImportError(
+        "`firecrawl-py` not installed. Please install using `pip install firecrawl-py`. Original error: " + str(e)
+    ) from e
+
+# ScrapeOptions may not be available in all firecrawl versions; import if present, otherwise fall back to None
+try:
+    from firecrawl import ScrapeOptions  # type: ignore[attr-defined]
+except Exception:
+    ScrapeOptions = None
 
 
 class CustomJSONEncoder(json.JSONEncoder):
@@ -104,7 +112,11 @@ class FirecrawlTools(Toolkit):
         if self.limit or limit:
             params["limit"] = self.limit or limit
         if self.formats:
-            params["scrape_options"] = ScrapeOptions(formats=self.formats)  # type: ignore
+            if ScrapeOptions is not None:
+                params["scrape_options"] = ScrapeOptions(formats=self.formats)  # type: ignore
+            else:
+                # Fallback for firecrawl versions without ScrapeOptions: pass formats directly
+                params["formats"] = self.formats
 
         params["poll_interval"] = self.poll_interval
 
@@ -132,7 +144,11 @@ class FirecrawlTools(Toolkit):
         if self.limit or limit:
             params["limit"] = self.limit or limit
         if self.formats:
-            params["scrape_options"] = ScrapeOptions(formats=self.formats)  # type: ignore
+            if ScrapeOptions is not None:
+                params["scrape_options"] = ScrapeOptions(formats=self.formats)  # type: ignore
+            else:
+                # Fallback for firecrawl versions without ScrapeOptions: pass formats directly
+                params["formats"] = self.formats
         if self.search_params:
             params.update(self.search_params)
 
