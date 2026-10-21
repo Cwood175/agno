@@ -1096,9 +1096,9 @@ class Agent:
                     run_state=RunStatus.cancelled, content="Operation cancelled by user", run_response=run_response
                 )
                 if stream and self.is_streamable:
-                    return generator_wrapper(
+                    return cast(Iterator[RunResponseEvent], generator_wrapper(
                         create_run_response_cancelled_event(run_response, "Operation cancelled by user")
-                    )
+                    ))
                 else:
                     return self.run_response
 
@@ -1108,12 +1108,12 @@ class Agent:
                 f"Failed after {num_attempts} attempts. Last error using {last_exception.model_name}({last_exception.model_id})"
             )
             if stream and self.is_streamable:
-                return generator_wrapper(create_run_response_error_event(run_response, error=str(last_exception)))
+                return cast(Iterator[RunResponseEvent], generator_wrapper(create_run_response_error_event(run_response, error=str(last_exception))))
 
             raise last_exception
         else:
             if stream and self.is_streamable:
-                return generator_wrapper(create_run_response_error_event(run_response, error=str(last_exception)))
+                return cast(Iterator[RunResponseEvent], generator_wrapper(create_run_response_error_event(run_response, error=str(last_exception))))
             raise Exception(f"Failed after {num_attempts} attempts.")
 
     async def _arun(
@@ -1190,9 +1190,9 @@ class Agent:
 
         # We should break out of the run function
         if any(tool_call.is_paused for tool_call in run_response.tools or []):
-            return self._handle_agent_run_paused(
+            return cast(RunResponse, self._handle_agent_run_paused(
                 run_response=run_response, run_messages=run_messages, session_id=session_id, user_id=user_id
-            )
+            ))
 
         # 4. Update Agent Memory
         async for _ in self._aupdate_memory(
@@ -1504,9 +1504,9 @@ class Agent:
                     run_state=RunStatus.cancelled, content="Operation cancelled by user", run_response=run_response
                 )
                 if stream and self.is_streamable:
-                    return async_generator_wrapper(
+                    return cast(Any, async_generator_wrapper(
                         create_run_response_cancelled_event(run_response, "Operation cancelled by user")
-                    )
+                    ))
                 else:
                     return self.run_response
 
@@ -1517,11 +1517,11 @@ class Agent:
             )
 
             if stream and self.is_streamable:
-                return async_generator_wrapper(create_run_response_error_event(run_response, error=str(last_exception)))
+                return cast(Any, async_generator_wrapper(create_run_response_error_event(run_response, error=str(last_exception))))
             raise last_exception
         else:
             if stream and self.is_streamable:
-                return async_generator_wrapper(create_run_response_error_event(run_response, error=str(last_exception)))
+                return cast(Any, async_generator_wrapper(create_run_response_error_event(run_response, error=str(last_exception))))
             raise Exception(f"Failed after {num_attempts} attempts.")
 
     @overload
@@ -3643,7 +3643,7 @@ class Agent:
                     strict = True
 
                 for tool in agent_tools:
-                    if isinstance(tool, Dict):
+                    if isinstance(tool, dict):
                         # If a dict is passed, it is a builtin tool
                         # that is run by the model provider and not the Agent
                         self._tools_for_model.append(tool)
@@ -5586,7 +5586,7 @@ class Agent:
             reasoning_model = deepcopy(self.model)
         if reasoning_model is None:
             log_warning("Reasoning error. Reasoning model is None, continuing regular session...")
-            return
+            return iter(())
 
         # If a reasoning model is provided, use it to generate reasoning
         if reasoning_model_provided:
@@ -5649,7 +5649,7 @@ class Agent:
 
                 if reasoning_message is None:
                     log_warning("Reasoning error. Reasoning response is None, continuing regular session...")
-                    return
+                    return iter(())
                 run_messages.messages.append(reasoning_message)
                 # Add reasoning step to the Agent's run_response
                 self.update_run_response_with_reasoning(
@@ -5695,7 +5695,7 @@ class Agent:
             # Validate reasoning agent
             if reasoning_agent is None:
                 log_warning("Reasoning error. Reasoning agent is None, continuing regular session...")
-                return
+                return iter(())
             # Ensure the reasoning agent response model is ReasoningSteps
             if (
                 reasoning_agent.response_model is not None
@@ -5703,7 +5703,7 @@ class Agent:
                 and not issubclass(reasoning_agent.response_model, ReasoningSteps)
             ):
                 log_warning("Reasoning agent response model should be `ReasoningSteps`, continuing regular session...")
-                return
+                return iter(())
             # Ensure the reasoning model and agent do not show tool calls
             reasoning_agent.show_tool_calls = False
 
@@ -5788,7 +5788,7 @@ class Agent:
                     self.run_response,
                 )
 
-    async def areason(self, run_messages: RunMessages) -> Any:
+    async def areason(self, run_messages: RunMessages) -> AsyncIterator[RunResponseEvent]:
         self.run_response = cast(RunResponse, self.run_response)
         # Yield a reasoning started event
         if self.stream_intermediate_steps:
@@ -5807,7 +5807,10 @@ class Agent:
             reasoning_model = deepcopy(self.model)
         if reasoning_model is None:
             log_warning("Reasoning error. Reasoning model is None, continuing regular session...")
-            return
+            async def _empty_async():
+                if False:
+                    yield
+            return _empty_async()
 
         # If a reasoning model is provided, use it to generate reasoning
         if reasoning_model_provided:
@@ -5870,7 +5873,10 @@ class Agent:
 
                 if reasoning_message is None:
                     log_warning("Reasoning error. Reasoning response is None, continuing regular session...")
-                    return
+                    async def _empty_async():
+                        if False:
+                            yield
+                    return _empty_async()
                 run_messages.messages.append(reasoning_message)
                 # Add reasoning step to the Agent's run_response
                 self.update_run_response_with_reasoning(
@@ -5916,7 +5922,10 @@ class Agent:
             # Validate reasoning agent
             if reasoning_agent is None:
                 log_warning("Reasoning error. Reasoning agent is None, continuing regular session...")
-                return
+                async def _empty_async():
+                    if False:
+                        yield
+                return _empty_async()
             # Ensure the reasoning agent response model is ReasoningSteps
             if (
                 reasoning_agent.response_model is not None
@@ -5924,7 +5933,10 @@ class Agent:
                 and not issubclass(reasoning_agent.response_model, ReasoningSteps)
             ):
                 log_warning("Reasoning agent response model should be `ReasoningSteps`, continuing regular session...")
-                return
+                async def _empty_async():
+                    if False:
+                        yield
+                return _empty_async()
 
             # Ensure the reasoning model and agent do not show tool calls
             reasoning_agent.show_tool_calls = False

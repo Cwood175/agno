@@ -5,10 +5,22 @@ from typing import Any, Dict, List, Optional
 from agno.tools import Toolkit
 from agno.utils.log import logger
 
+# Import FirecrawlApp; treat missing package separately from missing attributes
 try:
-    from firecrawl import FirecrawlApp, ScrapeOptions  # type: ignore[attr-defined]
-except ImportError:
+    from firecrawl import FirecrawlApp  # type: ignore[attr-defined]
+except ModuleNotFoundError:
     raise ImportError("`firecrawl-py` not installed. Please install using `pip install firecrawl-py`")
+
+# ScrapeOptions may not be exported at top-level in all versions; try guarded imports
+ScrapeOptions = None
+try:
+    from firecrawl import ScrapeOptions  # type: ignore[attr-defined]
+except Exception:
+    try:
+        # Common alternative location for ScrapeOptions
+        from firecrawl.options import ScrapeOptions  # type: ignore[attr-defined]
+    except Exception:
+        ScrapeOptions = None  # type: ignore[assignment]
 
 
 class CustomJSONEncoder(json.JSONEncoder):
