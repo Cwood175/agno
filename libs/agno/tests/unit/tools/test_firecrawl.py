@@ -2,12 +2,18 @@
 
 import json
 import os
+
+# Defer importing external packages that may import incompatible symbols during test collection.
+# These should be imported inside test functions/fixtures after stubbing/mocking the 'firecrawl' package.
+from typing import TYPE_CHECKING
 from unittest.mock import Mock, patch
 
 import pytest
-from firecrawl import FirecrawlApp
 
-from agno.tools.firecrawl import FirecrawlTools
+if TYPE_CHECKING:
+    from firecrawl import FirecrawlApp
+
+    from agno.tools.firecrawl import FirecrawlTools
 
 TEST_API_KEY = os.environ.get("FIRECRAWL_API_KEY", "test_api_key")
 TEST_API_URL = "https://api.firecrawl.dev"
