@@ -81,9 +81,12 @@ class CosmosMongoDb(MongoDb):
     def _get_collection(self) -> Collection:
         """Get the collection following Azure Cosmos DB patterns."""
         if self._collection is None:
-            if self._client is None:
+            # Ensure client and db are initialized before accessing db.get_collection
+            if self._client is None or self._db is None:
                 self._get_client()
 
+            # mypy: assert that _db is not None for later access
+            assert self._db is not None
             self._collection = self._db.get_collection(self.collection_name)
             log_info(f"Using collection: {self.collection_name}")
         return self._collection
