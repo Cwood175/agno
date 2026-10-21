@@ -2,14 +2,14 @@
 
 from dataclasses import asdict
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
 
 from agno.utils.log import logger
 
 
 def store_result_in_file(
     file_path: str,
-    result: Union["AccuracyResult", "PerformanceResult", "ReliabilityResult"],
+    result: object,
     eval_id: Optional[str] = None,
     name: Optional[str] = None,
 ):
