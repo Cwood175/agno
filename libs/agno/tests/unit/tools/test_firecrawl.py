@@ -7,7 +7,26 @@ from unittest.mock import Mock, patch
 import pytest
 from firecrawl import FirecrawlApp
 
-from agno.tools.firecrawl import FirecrawlTools
+
+# Defer importing FirecrawlTools from agno.tools.firecrawl to avoid ImportError
+# during test collection if CI installs an incompatible 'firecrawl' package variant.
+class _LazyFirecrawlTools:
+    def __init__(self, *args, **kwargs):
+        from agno.tools.firecrawl import FirecrawlTools as _RealFirecrawlTools
+
+        self._impl = _RealFirecrawlTools(*args, **kwargs)
+
+    def __getattr__(self, name):
+        return getattr(self._impl, name)
+
+    def __setattr__(self, name, value):
+        if name == "_impl":
+            object.__setattr__(self, name, value)
+        else:
+            setattr(self._impl, name, value)
+
+
+FirecrawlTools = _LazyFirecrawlTools
 
 TEST_API_KEY = os.environ.get("FIRECRAWL_API_KEY", "test_api_key")
 TEST_API_URL = "https://api.firecrawl.dev"
