@@ -120,16 +120,21 @@ class Qdrant(VectorDb):
         self.hybrid_fusion_strategy = hybrid_fusion_strategy
 
         if self.search_type in [SearchType.keyword, SearchType.hybrid]:
+            # Use a dynamic import to avoid static import resolution by type checkers
+            # and annotate the encoder as Any so missing type stubs won't break mypy at runtime.
+            default_kwargs = {"model_name": DEFAULT_SPARSE_MODEL}
+            if fastembed_kwargs:
+                default_kwargs.update(fastembed_kwargs)
+
             try:
-                from fastembed import SparseTextEmbedding
+                import importlib
+                from typing import Any
 
-                default_kwargs = {"model_name": DEFAULT_SPARSE_MODEL}
-                if fastembed_kwargs:
-                    default_kwargs.update(fastembed_kwargs)
+                fastembed_module = importlib.import_module("fastembed")
+                SparseTextEmbedding = getattr(fastembed_module, "SparseTextEmbedding")
+                self.sparse_encoder: Any = SparseTextEmbedding(**default_kwargs)
 
-                self.sparse_encoder = SparseTextEmbedding(**default_kwargs)
-
-            except ImportError as e:
+            except Exception as e:
                 raise ImportError(
                     "To use keyword/hybrid search, install the `fastembed` extra with `pip install 'qdrant-client[fastembed]'`."
                 ) from e
