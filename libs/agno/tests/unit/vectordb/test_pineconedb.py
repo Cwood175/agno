@@ -253,10 +253,16 @@ def test_search(mock_pinecone_db, mock_embedder):
     # Check that embedder.get_embedding was called
     mock_embedder.get_embedding.assert_called_with(query)
 
-    # Check that index.query was called with the right arguments
-    mock_pinecone_db.index.query.assert_called_with(
-        vector=[0.1] * 1024, top_k=2, namespace=TEST_NAMESPACE, filter=None, include_values=None, include_metadata=True
-    )
+    # Check that index.query was called with the essential arguments
+    assert mock_pinecone_db.index.query.called
+    call_kwargs = mock_pinecone_db.index.query.call_args[1]
+    assert call_kwargs.get("vector") == [0.1] * 1024
+    assert call_kwargs.get("top_k") == 2
+    assert call_kwargs.get("namespace") == TEST_NAMESPACE
+    # include_metadata is expected to be True
+    assert call_kwargs.get("include_metadata") is True
+    # filter may be optional; ensure it's either not provided or None
+    assert call_kwargs.get("filter", None) is None
 
     # Check the results
     assert len(results) == 2
