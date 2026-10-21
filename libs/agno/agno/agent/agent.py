@@ -1308,7 +1308,7 @@ class Agent:
                 self.run_messages = run_messages
 
                 if stream and self.is_streamable:
-                    resp = self._run_stream(
+                    return self._run_stream(
                         run_response=run_response,
                         run_messages=run_messages,
                         message=message,
@@ -1318,9 +1318,8 @@ class Agent:
                         messages=messages,
                         stream_intermediate_steps=stream_intermediate_steps,
                     )
-                    return resp
                 else:
-                    resp = self._run(
+                    return self._run(
                         run_response=run_response,
                         run_messages=run_messages,
                         message=message,
@@ -1329,7 +1328,6 @@ class Agent:
                         response_format=response_format,
                         messages=messages,
                     )
-                    return resp
             except ModelProviderError as e:
                 log_warning(f"Attempt {attempt + 1}/{num_attempts} failed: {str(e)}")
                 if isinstance(e, StopAgentRun):
@@ -4287,9 +4285,19 @@ class Agent:
                 log_debug(f"Step {step_count}", center=True, symbol="=")
                 try:
                     # Run the reasoning agent
-                    reasoning_agent_response: RunResponse = reasoning_agent.run(
-                        messages=run_messages.get_input_messages()
-                    )
+                    reasoning_agent_response_candidate = reasoning_agent.run(messages=run_messages.get_input_messages())
+                    # Handle streaming iterators vs single RunResponse
+                    from collections.abc import Iterator as _Iterator
+
+                    if isinstance(reasoning_agent_response_candidate, _Iterator):
+                        try:
+                            reasoning_agent_response = next(reasoning_agent_response_candidate)  # type: ignore
+                        except StopIteration:
+                            log_warning("Reasoning error. Reasoning response is empty, continuing regular session...")
+                            break
+                    else:
+                        reasoning_agent_response = reasoning_agent_response_candidate  # type: ignore
+
                     if reasoning_agent_response.content is None or reasoning_agent_response.messages is None:
                         log_warning("Reasoning error. Reasoning response is empty, continuing regular session...")
                         break
