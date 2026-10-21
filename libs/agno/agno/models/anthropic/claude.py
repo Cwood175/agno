@@ -504,12 +504,22 @@ class Claude(Model):
 
         # Capture citations from the final response
         elif isinstance(response, MessageStopEvent):
-            model_response.citations = Citations(raw=[], urls=[], documents=[])
+            # Ensure the citations container and its lists are initialized before use
+            if model_response.citations is None:
+                model_response.citations = Citations(raw=[], urls=[], documents=[])
+            if model_response.citations.raw is None:
+                model_response.citations.raw = []
+            if model_response.citations.urls is None:
+                model_response.citations.urls = []
+            if model_response.citations.documents is None:
+                model_response.citations.documents = []
+
             for block in response.message.content:
                 citations = getattr(block, "citations", None)
                 if not citations:
                     continue
                 for citation in citations:
+                    # Safe to append because we ensured lists exist above
                     model_response.citations.raw.append(citation.model_dump())  # type: ignore
                     # Web search citations
                     if isinstance(citation, CitationsWebSearchResultLocation):
