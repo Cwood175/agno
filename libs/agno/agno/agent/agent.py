@@ -230,7 +230,7 @@ class Agent:
 
     # --- Agent Response Model Settings ---
     # Provide a response model to get the response as a Pydantic model
-    response_model: Optional[Type[BaseModel]] = None
+    response_model: Optional[Union[BaseModel, Type[BaseModel], str, List[Any]]] = None
     # Provide a secondary model to parse the response from the primary model
     parser_model: Optional[Model] = None
     # Provide a prompt for the parser model
@@ -360,7 +360,7 @@ class Agent:
         exponential_backoff: bool = False,
         parser_model: Optional[Model] = None,
         parser_model_prompt: Optional[str] = None,
-        response_model: Optional[Type[BaseModel]] = None,
+        response_model: Optional[Union[BaseModel, Type[BaseModel], str, List[Any]]] = None,
         parse_response: bool = True,
         structured_outputs: Optional[bool] = None,
         use_json_mode: bool = False,
@@ -4138,7 +4138,16 @@ class Agent:
                     and (not self.use_json_mode or self.structured_outputs is True)
                 )
             ):
-                sys_message_content += f"\n{get_json_output_prompt(self.response_model)}"  # type: ignore
+                # Ensure we pass an acceptable type to get_json_output_prompt (str, list[Any], or BaseModel instance)
+                _rm = self.response_model
+                if isinstance(_rm, type):
+                    try:
+                        _arg_for_prompt = _rm()
+                    except Exception:
+                        _arg_for_prompt = getattr(_rm, "__name__", str(_rm))
+                else:
+                    _arg_for_prompt = _rm
+                sys_message_content += f"\n{get_json_output_prompt(_arg_for_prompt)}"
 
             # type: ignore
             return Message(role=self.system_message_role, content=sys_message_content)
@@ -4382,7 +4391,7 @@ class Agent:
                 and (not self.use_json_mode or self.structured_outputs is True)
             )
         ):
-            system_message_content += f"{get_json_output_prompt(self.response_model)}"  # type: ignore
+            system_message_content += f"{get_json_output_prompt(self.response_model())}"  # type: ignore
 
         # 3.3.14 Add the response model format prompt if response_model is provided
         if self.response_model is not None and self.parser_model is not None:
@@ -4807,7 +4816,15 @@ class Agent:
         )
 
         if response_format == {"type": "json_object"} and self.response_model is not None:  # type: ignore
-            system_content += f"{get_json_output_prompt(self.response_model)}"
+            _rm = self.response_model
+            if isinstance(_rm, type):
+                try:
+                    _arg_for_prompt = _rm()
+                except Exception:
+                    _arg_for_prompt = getattr(_rm, "__name__", str(_rm))
+            else:
+                _arg_for_prompt = _rm
+            system_content += f"{get_json_output_prompt(_arg_for_prompt)}"
 
         return [
             Message(role="system", content=system_content),
