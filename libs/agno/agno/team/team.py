@@ -584,7 +584,7 @@ class Team:
 
         self.initialize_team(session_id=session_id)
 
-        effective_filters = {}
+        effective_filters: Optional[Dict[str, Any]] = None
         # Handle knowledge filters
         if self.knowledge_filters or knowledge_filters:
             """
@@ -595,7 +595,7 @@ class Team:
             if not self.knowledge.valid_metadata_filters:  # type: ignore
                 self.knowledge.initialize_valid_filters()  # type: ignore
 
-            effective_filters = self._get_team_effective_filters(knowledge_filters)
+            effective_filters = self._get_team_effective_filters(knowledge_filters) or {}
 
         # should not go to all members by default
         # for member in self.members:
@@ -5494,7 +5494,7 @@ class Team:
                         audio=audio,
                         files=files,
                         stream=False,
-                        knowledge_filters=knowledge_filters,
+                        knowledge_filters=knowledge_filters or {},
                     )
                 else:
                     member_agent_run_response = member_agent.run(
@@ -6499,7 +6499,7 @@ class Team:
     ) -> Optional[List[Dict[str, Any]]]:
         """Return a list of references from the knowledge base"""
         from agno.document import Document
-        
+
         # Validate the filters against known valid filter keys
         if self.knowledge is not None:
             valid_filters, invalid_keys = self.knowledge.validate_filters(filters)  # type: ignore
@@ -6605,7 +6605,7 @@ class Team:
 
         Priority: Member filters > Run-time filters > Team filters
         """
-        effective_filters = None
+        effective_filters: Optional[Dict[str, Any]] = None
 
         # Start with team-level filters if they exist
         if self.knowledge_filters:
