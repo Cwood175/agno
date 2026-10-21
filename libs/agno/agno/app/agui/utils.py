@@ -114,16 +114,22 @@ def _create_events_from_chunk(
     """
     events_to_emit = []
 
+    # Normalize to underlying response if chunk is an event that wraps it
+    resp = getattr(chunk, "response", chunk)
+
     # Extract content
-    if isinstance(chunk, RunResponse):
-        content = extract_response_chunk_content(chunk)
-    elif isinstance(chunk, TeamRunResponse):
-        content = extract_team_response_chunk_content(chunk)
+    if isinstance(resp, RunResponse):
+        content = extract_response_chunk_content(resp)
+    elif isinstance(resp, TeamRunResponse):
+        content = extract_team_response_chunk_content(resp)
     else:
         content = None
 
+    # Helper to safely get event attribute from chunk
+    chunk_event = getattr(chunk, "event", None)
+
     # Handle text responses
-    if chunk.event == RunEvent.run_response_content or chunk.event == TeamRunEvent.run_response_content:
+    if chunk_event == RunEvent.run_response_content or chunk_event == TeamRunEvent.run_response_content:
         # Handle the message start event, emitted once per message
         if not message_started:
             message_started = True
@@ -144,9 +150,10 @@ def _create_events_from_chunk(
             events_to_emit.append(content_event)
 
     # Handle starting a new tool call
-    elif chunk.event == RunEvent.tool_call_started:
-        if chunk.tools is not None and len(chunk.tools) != 0:
-            tool_call = chunk.tools[0]
+    elif chunk_event == RunEvent.tool_call_started:
+        tools = getattr(resp, "tools", None)
+        if tools is not None and len(tools) != 0:
+            tool_call = tools[0]
             start_event = ToolCallStartEvent(
                 type=EventType.TOOL_CALL_START,
                 tool_call_id=tool_call.tool_call_id,  # type: ignore
@@ -163,9 +170,10 @@ def _create_events_from_chunk(
             events_to_emit.append(args_event)
 
     # Handle tool call completion
-    elif chunk.event == RunEvent.tool_call_completed:
-        if chunk.tools is not None and len(chunk.tools) != 0:
-            tool_call = chunk.tools[0]
+    elif chunk_event == RunEvent.tool_call_completed:
+        tools = getattr(resp, "tools", None)
+        if tools is not None and len(tools) != 0:
+            tool_call = tools[0]
             if tool_call.tool_call_id not in event_buffer.ended_tool_call_ids:
                 end_event = ToolCallEndEvent(
                     type=EventType.TOOL_CALL_END,
@@ -174,10 +182,10 @@ def _create_events_from_chunk(
                 events_to_emit.append(end_event)
 
     # Handle reasoning
-    elif chunk.event == RunEvent.reasoning_started:
+    elif chunk_event == RunEvent.reasoning_started:
         step_event = StepStartedEvent(type=EventType.STEP_STARTED, step_name="reasoning")
         events_to_emit.append(step_event)
-    elif chunk.event == RunEvent.reasoning_completed:
+    elif chunk_event == RunEvent.reasoning_completed:
         step_event = StepFinishedEvent(type=EventType.STEP_FINISHED, step_name="reasoning")
         events_to_emit.append(step_event)
 
@@ -290,7 +298,9 @@ def stream_agno_response_as_agui_events(
 
 # Async version - thin wrapper
 async def async_stream_agno_response_as_agui_events(
-    response_stream: Union[AsyncIterator[RunResponseEvent], AsyncIterator[TeamRunResponseEvent]], thread_id: str, run_id: str
+    response_stream: Union[AsyncIterator[RunResponseEvent], AsyncIterator[TeamRunResponseEvent]],
+    thread_id: str,
+    run_id: str,
 ) -> AsyncIterator[BaseEvent]:
     """Map the Agno response stream to AG-UI format, handling event ordering constraints."""
     message_id = str(uuid.uuid4())
