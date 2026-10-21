@@ -5,10 +5,23 @@ from typing import Any, Dict, List, Optional
 from agno.tools import Toolkit
 from agno.utils.log import logger
 
+# First check whether the firecrawl package is installed. A ModuleNotFoundError
+# indicates the package is missing; if the package exists but attributes are
+# missing, raise a clearer ImportError that preserves the original exception.
+try:
+    import firecrawl  # type: ignore
+except ModuleNotFoundError as exc:
+    raise ModuleNotFoundError("`firecrawl-py` not installed. Please install using `pip install firecrawl-py`") from exc
+
 try:
     from firecrawl import FirecrawlApp, ScrapeOptions  # type: ignore[attr-defined]
-except ImportError:
-    raise ImportError("`firecrawl-py` not installed. Please install using `pip install firecrawl-py`")
+except ImportError as exc:
+    # The package is present but does not expose the expected symbols.
+    raise ImportError(
+        "The installed 'firecrawl' package is missing required attributes. "
+        "Expected to import 'FirecrawlApp' and 'ScrapeOptions'. "
+        "Please ensure you have the correct version of 'firecrawl-py' installed."
+    ) from exc
 
 
 class CustomJSONEncoder(json.JSONEncoder):
