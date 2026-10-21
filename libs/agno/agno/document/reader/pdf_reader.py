@@ -22,6 +22,8 @@ def process_image_page(doc_name: str, page_number: int, page: Any) -> Document:
         raise ImportError(
             "`rapidocr_onnxruntime` not installed. Please install it via `pip install rapidocr_onnxruntime`."
         )
+    import asyncio
+
     ocr = rapidocr.RapidOCR()
     page_text = page.extract_text() or ""
     images_text_list = []
@@ -30,8 +32,8 @@ def process_image_page(doc_name: str, page_number: int, page: Any) -> Document:
     for image_object in page.images:
         image_data = image_object.data
 
-        # Perform OCR on the image
-        ocr_result, elapse = ocr(image_data)
+        # Perform OCR on the image (run the async OCR coroutine to completion)
+        ocr_result, elapse = asyncio.get_event_loop().run_until_complete(ocr(image_data))
 
         # Extract text from OCR result
         if ocr_result:
@@ -63,7 +65,7 @@ async def async_process_image_page(doc_name: str, page_number: int, page: Any) -
 
     # Process images in parallel
     async def process_image(image_data: bytes) -> List[str]:
-        ocr_result, _ = ocr(image_data)
+        ocr_result, _ = await ocr(image_data)
         return [item[1] for item in ocr_result] if ocr_result else []
 
     image_tasks = [process_image(image.data) for image in page.images]

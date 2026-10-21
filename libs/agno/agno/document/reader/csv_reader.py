@@ -5,7 +5,6 @@ import os
 from pathlib import Path
 from typing import IO, Any, List, Optional, Union
 from urllib.parse import urlparse
-from uuid import uuid4
 
 from agno.utils.http import async_fetch_with_retry, fetch_with_retry
 
@@ -44,7 +43,7 @@ class CSVReader(Reader):
             documents = [
                 Document(
                     name=csv_name,
-                    id=str(uuid4()),
+                    id=f"{csv_name}_1",
                     content=csv_content,
                 )
             ]
@@ -98,7 +97,7 @@ class CSVReader(Reader):
                 documents = [
                     Document(
                         name=csv_name,
-                        id=str(uuid4()),
+                        id=f"{csv_name}_1",
                         content=csv_content,
                     )
                 ]
@@ -114,7 +113,7 @@ class CSVReader(Reader):
 
                     return Document(
                         name=csv_name,
-                        id=str(uuid4()),
+                        id=f"{csv_name}_page{page_number}_1",
                         meta_data={"page": page_number, "start_row": start_row, "rows": len(page_rows)},
                         content=page_content,
                     )
