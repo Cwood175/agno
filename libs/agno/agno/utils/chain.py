@@ -3,11 +3,12 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Dict, Iterator, List, Optional, Union, cast
 
+from pydantic import BaseModel
+
 from agno.agent import Agent
 from agno.run.response import RunResponse
 from agno.utils.log import log_debug, log_error
 from agno.workflow import Workflow
-from pydantic import BaseModel
 
 
 @dataclass
@@ -23,7 +24,7 @@ class SequentialWorkFlow(Workflow):
     def __or__(self, *others) -> Any:
         return sequential_chain(self, *others)
 
-    def run(self, input_message: str) -> str:
+    def run(self, input_message: str) -> RunResponse:
         """
         Execute the sequential chain flow between multiple agents.
         Logs and raises errors if any agent's response is invalid.
@@ -68,9 +69,7 @@ class SequentialWorkFlow(Workflow):
                     try:
                         all_responses[key] = json.dumps(response.content)
                     except Exception as e:
-                        raise ValueError(
-                            f"Failed to serialize response from agent '{key}': {e}"
-                        )
+                        raise ValueError(f"Failed to serialize response from agent '{key}': {e}")
 
                 # Log the response
                 log_debug(f"Agent '{key}' response: {all_responses[key]}")

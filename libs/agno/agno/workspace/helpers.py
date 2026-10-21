@@ -39,10 +39,18 @@ def get_workspace_dir_path(ws_root_path: Path) -> Path:
         agno_conf = read_pyproject_agno(ws_pyproject_toml)
         if agno_conf is not None:
             agno_conf_workspace_dir_str = agno_conf.get("workspace", None)
-            agno_conf_workspace_dir_path = ws_root_path.joinpath(agno_conf_workspace_dir_str)
-            logger.debug(f"Searching {agno_conf_workspace_dir_path}")
-            if agno_conf_workspace_dir_path.exists() and agno_conf_workspace_dir_path.is_dir():
-                return agno_conf_workspace_dir_path
+            # Ensure the workspace value is present and is a str/PathLike before joining
+            import os
+
+            if agno_conf_workspace_dir_str is None:
+                logger.debug("No 'workspace' key found in pyproject agno configuration")
+            elif isinstance(agno_conf_workspace_dir_str, (str, os.PathLike)):
+                agno_conf_workspace_dir_path = ws_root_path.joinpath(agno_conf_workspace_dir_str)
+                logger.debug(f"Searching {agno_conf_workspace_dir_path}")
+                if agno_conf_workspace_dir_path.exists() and agno_conf_workspace_dir_path.is_dir():
+                    return agno_conf_workspace_dir_path
+            else:
+                logger.debug("Invalid 'workspace' value in pyproject agno configuration; expected str or PathLike")
 
     logger.error(f"Could not find a workspace at: {ws_root_path}")
     exit(0)
