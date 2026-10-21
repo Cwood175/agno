@@ -7751,7 +7751,7 @@ class Agent:
 
                 metrics_message = Message(
                     role="assistant",
-                    content=self.run_response.reasoning_content,
+                    content=(self.run_response.reasoning_content or ""),
                     metrics={"time": reasoning_time_taken},
                 )
 

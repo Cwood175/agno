@@ -2,12 +2,20 @@
 
 import json
 import os
+from typing import TYPE_CHECKING
 from unittest.mock import Mock, patch
 
 import pytest
-from firecrawl import FirecrawlApp
 
-from agno.tools.firecrawl import FirecrawlTools
+if TYPE_CHECKING:
+    from firecrawl import FirecrawlApp  # type: ignore
+
+    from agno.tools.firecrawl import FirecrawlTools  # type: ignore
+
+# Avoid importing external packages at module import time to prevent CI import errors.
+# Import the real classes inside fixtures or test functions as needed.
+FirecrawlApp = None
+FirecrawlTools = None
 
 TEST_API_KEY = os.environ.get("FIRECRAWL_API_KEY", "test_api_key")
 TEST_API_URL = "https://api.firecrawl.dev"
