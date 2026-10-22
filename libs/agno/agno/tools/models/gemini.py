@@ -104,7 +104,7 @@ class GeminiTools(Toolkit):
                     )
                 )
                 log_debug(f"Successfully generated image {media_id} with model {self.image_model}")
-            return "Image generated successfully"
+            return f"Image generated successfully with media ID {media_id}"
 
         except Exception as e:
             log_error(f"Failed to generate image: Client or method not available ({e})")
@@ -159,7 +159,7 @@ class GeminiTools(Toolkit):
                     )
                 )
                 log_debug(f"Successfully generated video {media_id} with model {self.video_model}")
-            return "Video generated successfully"
+            return f"Video generated successfully with media ID {media_id}"
         except Exception as e:
             log_error(f"Failed to generate video: {e}")
             return f"Failed to generate video: {e}"

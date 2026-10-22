@@ -832,12 +832,10 @@ class Agent:
 
             # Handle structured outputs
             if self.response_model is not None and model_response.parsed is not None:
-                # We get native structured outputs from the model
-                if self.model.structured_outputs:
-                    # Update the run_response content with the structured output
-                    self.run_response.content = model_response.parsed
-                    # Update the run_response content_type with the structured output class name
-                    self.run_response.content_type = self.response_model.__name__
+                # Update the run_response content with the structured output
+                self.run_response.content = model_response.parsed
+                # Update the run_response content_type with the structured output class name
+                self.run_response.content_type = self.response_model.__name__
             else:
                 # Update the run_response content with the model response content
                 self.run_response.content = model_response.content
@@ -889,6 +887,9 @@ class Agent:
                 and hasattr(self.run_response.extra_data, "reasoning_steps")
             ):
                 all_reasoning_steps = cast(List[ReasoningStep], self.run_response.extra_data.reasoning_steps)
+            else:
+                # Initialize an empty list if the attribute is missing
+                all_reasoning_steps = []
 
             if all_reasoning_steps:
                 self._add_reasoning_metrics_to_extra_data(reasoning_time_taken)
@@ -906,8 +907,8 @@ class Agent:
         # Update the RunResponse metrics
         self.run_response.metrics = self.aggregate_metrics_from_messages(messages_for_run_response)
 
-        # Update the run_response audio if streaming
-        if self.stream and model_response.audio is not None:
+        # Update the run_response audio regardless of streaming
+        if model_response.audio is not None:
             self.run_response.response_audio = model_response.audio
 
         # 9. Update Agent Memory
@@ -979,12 +980,7 @@ class Agent:
 
             self._make_memories_and_summaries(run_messages, session_id, user_id, messages)  # type: ignore
 
-            if self.session_metrics is None:
-                self.session_metrics = self.calculate_metrics(run_messages.messages)  # Calculate metrics for the run
-            else:
-                self.session_metrics += self.calculate_metrics(
-                    run_messages.messages
-                )  # Calculate metrics for the session
+            self.session_metrics = self.calculate_metrics(run_messages.messages)
 
         # Yield UpdatingMemory event
         if self.stream_intermediate_steps:
@@ -1174,6 +1170,7 @@ class Agent:
                                 if self.run_response is not None:
                                     self.run_response.content = structured_output
                                     self.run_response.content_type = self.response_model.__name__
+                                return run_response
                             else:
                                 log_warning("Failed to convert response to response_model")
                         except Exception as e:
@@ -1215,7 +1212,7 @@ class Agent:
                         )
                         return next(resp)
             except ModelProviderError as e:
-                log_warning(f"Attempt {attempt + 1}/{num_attempts} failed: {str(e)}")
+                log_warning(f"Attempt {attempt + 1}/{num_attempts} failed: {e!s}")
                 if isinstance(e, StopAgentRun):
                     raise e
                 last_exception = e
@@ -1224,7 +1221,6 @@ class Agent:
                         delay = 2**attempt * self.delay_between_retries
                     else:
                         delay = self.delay_between_retries
-                    import time
 
                     time.sleep(delay)
             except KeyboardInterrupt:
@@ -1607,12 +1603,7 @@ class Agent:
             agent_run.message = run_messages.user_message
 
             # Update the memories with the user message if needed
-            if (
-                self.memory.create_user_memories
-                and self.memory.update_user_memories_after_run
-                and run_messages.user_message is not None
-            ):
-                await self.memory.aupdate_memory(input=run_messages.user_message.get_content_string())
+            await self.memory.aupdate_memory(input=run_messages.user_message.get_content_string())
 
             if messages is not None and len(messages) > 0:
                 for _im in messages:
@@ -1634,8 +1625,7 @@ class Agent:
                         if agent_run.messages is None:
                             agent_run.messages = []
                         agent_run.messages.append(mp)
-                        if self.memory.create_user_memories and self.memory.update_user_memories_after_run:
-                            await self.memory.aupdate_memory(input=mp.get_content_string())
+                        await self.memory.aupdate_memory(input=mp.get_content_string())
                     else:
                         log_warning("Unable to add message to memory")
             # Add AgentRun to memory
@@ -1846,7 +1836,7 @@ class Agent:
                         )
                         return await resp.__anext__()
             except ModelProviderError as e:
-                log_warning(f"Attempt {attempt + 1}/{num_attempts} failed: {str(e)}")
+                log_warning(f"Attempt {attempt + 1}/{num_attempts} failed: {e!s}")
                 if isinstance(e, StopAgentRun):
                     raise e
                 last_exception = e
@@ -2016,9 +2006,9 @@ class Agent:
             agent_tools.extend(self.tools)
 
         # Add tools for accessing memory
-        if self.read_chat_history:
+        if self.read_chat_history and callable(self.get_chat_history_function):
             agent_tools.append(self.get_chat_history_function(session_id=session_id))
-        if self.read_tool_call_history:
+        if self.read_tool_call_history and callable(self.get_tool_call_history_function):
             agent_tools.append(self.get_tool_call_history_function(session_id=session_id))
 
         if isinstance(self.memory, AgentMemory) and self.memory.create_user_memories:
@@ -2039,13 +2029,13 @@ class Agent:
 
             if self.search_knowledge:
                 # Use async or sync search based on async_mode
-                if self.enable_agentic_filters:
+                if self.enable_agentic_filters and callable(self.search_knowledge_base_with_agentic_filters_function):
                     agent_tools.append(
                         self.search_knowledge_base_with_agentic_filters_function(
                             async_mode=async_mode, knowledge_filters=knowledge_filters
                         )
                     )
-                else:
+                elif callable(self.search_knowledge_base_function):
                     agent_tools.append(
                         self.search_knowledge_base_function(async_mode=async_mode, knowledge_filters=knowledge_filters)
                     )
@@ -2055,7 +2045,11 @@ class Agent:
         # Add transfer tools
         if self.has_team and self.team is not None:
             for agent_index, agent in enumerate(self.team):
-                agent_tools.append(self.get_transfer_function(agent, agent_index, session_id))
+                transfer_function = self.get_transfer_function(agent, agent_index, session_id)
+                if callable(transfer_function):
+                    agent_tools.append(transfer_function)
+                else:
+                    log_warning(f"Transfer function for agent {agent_index} is not callable: {transfer_function!r}")
 
         return agent_tools
 
@@ -2160,7 +2154,7 @@ class Agent:
                                 _functions_for_model[func.name] = func
                                 _tools_for_model.append({"type": "function", "function": func.to_dict()})
                                 log_debug(f"Added tool {func.name}")
-                        except Exception as e:
+                        except (ValueError, TypeError) as e:
                             log_warning(f"Could not add tool {tool}: {e}")
 
                 # Set tools on the model
@@ -2499,9 +2493,10 @@ class Agent:
                     try:
                         if self.memory.runs is None:
                             self.memory.runs = {}
-                        self.memory.runs[session.session_id] = []
                         for run in session.memory["runs"]:
                             run_session_id = run["session_id"]
+                            if run_session_id not in self.memory.runs:
+                                self.memory.runs[run_session_id] = []
                             if "team_id" in run:
                                 self.memory.runs[run_session_id].append(TeamRunResponse.from_dict(run))
                             else:
@@ -2523,6 +2518,7 @@ class Agent:
                                     for memory_id, memory in user_memories.items()
                                 }
                                 for user_id, user_memories in session.memory["memories"].items()
+                                if user_id == self.user_id
                             }
                     except Exception as e:
                         log_warning(f"Failed to load user memories: {e}")
@@ -2643,9 +2639,7 @@ class Agent:
         if self.model is not None:
             self.model.clear()
         if self.memory is not None:
-            if isinstance(self.memory, AgentMemory):
-                self.memory.clear()
-            elif isinstance(self.memory, Memory):
+            if isinstance(self.memory, AgentMemory) or isinstance(self.memory, Memory):
                 self.memory.clear()
         self.session_id = str(uuid4())
         self.load_session(force=True)
@@ -2767,7 +2761,7 @@ class Agent:
                     Examples:
                     1. If the user asks about a specific person like "Jordan Mitchell", you MUST use the search_knowledge_base tool with the filters parameter set to {{'<valid key like user id or something>': '<valid value based on the user query>'}}.
                     2. If the user asks about a specific document type like "contracts", you MUST use the search_knowledge_base tool with the filters parameter set to {{'document_type': 'contract'}}.
-                    4. If the user asks about a specific location like "documents from New York", you MUST use the search_knowledge_base tool with the filters parameter set to {{'<valid key like location if present in {valid_filters_str}>': 'New York'}}.
+                    4. If the user asks about a specific location like "documents from New York", you MUST use the search_knowledge_base tool with the filters parameter set to {{'location': 'New York'}}.
 
                     General Guidelines:
                     - Always analyze the user query to identify relevant metadata.
@@ -3276,18 +3270,7 @@ class Agent:
             return field_value.deep_copy()
 
         # For storage, model and reasoning_model, use a deep copy
-        elif field_name in ("storage", "model", "reasoning_model"):
-            try:
-                return deepcopy(field_value)
-            except Exception:
-                try:
-                    return copy(field_value)
-                except Exception as e:
-                    log_warning(f"Failed to copy field: {field_name} - {e}")
-                    return field_value
-
-        # For compound types, attempt a deep copy
-        elif isinstance(field_value, (list, dict, set)):
+        elif field_name in ("storage", "model", "reasoning_model") or isinstance(field_value, (list, dict, set)):
             try:
                 return deepcopy(field_value)
             except Exception:
@@ -3310,8 +3293,6 @@ class Agent:
 
         # For other types, attempt a shallow copy first
         try:
-            from copy import copy
-
             return copy(field_value)
         except Exception:
             # If copy fails, return as is
@@ -3506,7 +3487,6 @@ class Agent:
         self, query: str, num_documents: Optional[int] = None, filters: Optional[Dict[str, Any]] = None, **kwargs
     ) -> Optional[List[Dict[str, Any]]]:
         """Get relevant documents from knowledge base asynchronously."""
-        from agno.document import Document
 
         # Validate the filters against known valid filter keys
         valid_filters, invalid_keys = self.knowledge.validate_filters(filters)  # type: ignore
@@ -3536,6 +3516,9 @@ class Agent:
 
                 if isawaitable(result):
                     result = await result
+                elif inspect.iscoroutinefunction(self.retriever):
+                    # If the retriever is a coroutine function, the result should be awaited
+                    result = await result
 
                 return result
             except Exception as e:
@@ -3551,7 +3534,7 @@ class Agent:
                 num_documents = self.knowledge.num_documents
 
             log_debug(f"Searching knowledge base with filters: {filters}")
-            relevant_docs: List[Document] = await self.knowledge.async_search(
+            relevant_docs = await self.knowledge.async_search(
                 query=query, num_documents=num_documents, filters=filters, **kwargs
             )
 
@@ -3569,9 +3552,14 @@ class Agent:
             return ""
 
         if self.references_format == "yaml":
-            import yaml
+            try:
+                import yaml
 
-            return yaml.dump(docs)
+                return yaml.dump(docs)
+            except ImportError:
+                import json
+
+                return json.dumps(docs, indent=2, ensure_ascii=False)
 
         import json
 
@@ -3591,6 +3579,17 @@ class Agent:
 
         import json
 
+        def _sanitize(value):
+            try:
+                json.dumps(value, default=str)
+                return value
+            except Exception:
+                if isinstance(value, dict):
+                    return {_sanitize(k): _sanitize(v) for k, v in value.items()}
+                if isinstance(value, (list, tuple)):
+                    return [_sanitize(item) for item in value]
+                return str(value)
+
         try:
             return json.dumps(context, indent=2, default=str)
         except (TypeError, ValueError, OverflowError) as e:
@@ -3598,13 +3597,7 @@ class Agent:
             # Attempt a fallback conversion for non-serializable objects
             sanitized_context = {}
             for key, value in context.items():
-                try:
-                    # Try to serialize each value individually
-                    json.dumps({key: value}, default=str)
-                    sanitized_context[key] = value
-                except Exception:
-                    # If serialization fails, convert to string representation
-                    sanitized_context[key] = str(value)
+                sanitized_context[key] = _sanitize(value)
 
             try:
                 return json.dumps(sanitized_context, indent=2)
@@ -3640,13 +3633,15 @@ class Agent:
                 else:
                     import json
 
-                    fn_path.write_text(json.dumps(self.run_response.content, indent=2))
+                    fn_path.write_text(json.dumps(self.run_response.content, indent=2, ensure_ascii=False))
             except Exception as e:
                 log_warning(f"Failed to save output to file: {e}")
 
     def update_run_response_with_reasoning(
         self, reasoning_steps: List[ReasoningStep], reasoning_agent_messages: List[Message]
     ) -> None:
+        if self.run_response is None:
+            return
         self.run_response = cast(RunResponse, self.run_response)
         if self.run_response.extra_data is None:
             self.run_response.extra_data = RunResponseExtraData()
@@ -3694,16 +3689,15 @@ class Agent:
                         continue
                     if v is not None:
                         aggregated_metrics[k].append(v)
-        if aggregated_metrics is not None:
-            aggregated_metrics = dict(aggregated_metrics)
-        return aggregated_metrics
+        return dict(aggregated_metrics)
 
     def calculate_metrics(self, messages: List[Message]) -> SessionMetrics:
         session_metrics = SessionMetrics()
         assistant_message_role = self.model.assistant_message_role if self.model is not None else "assistant"
         for m in messages:
             if m.role == assistant_message_role and m.metrics is not None:
-                session_metrics += m.metrics
+                if isinstance(m.metrics, SessionMetrics):
+                    session_metrics += m.metrics
         return session_metrics
 
     def rename(self, name: str, session_id: Optional[str] = None) -> None:
@@ -4030,7 +4024,8 @@ class Agent:
                 return
             # Ensure the reasoning model and agent do not show tool calls
             reasoning_agent.show_tool_calls = False
-            reasoning_agent.model.show_tool_calls = False  # type: ignore
+            if reasoning_agent.model is not None:
+                reasoning_agent.model.show_tool_calls = False
 
             step_count = 1
             next_action = NextAction.CONTINUE
@@ -4241,7 +4236,8 @@ class Agent:
                 return
             # Ensure the reasoning model and agent do not show tool calls
             reasoning_agent.show_tool_calls = False
-            reasoning_agent.model.show_tool_calls = False  # type: ignore
+            if reasoning_agent.model is not None:
+                reasoning_agent.model.show_tool_calls = False
 
             step_count = 1
             next_action = NextAction.CONTINUE
@@ -4482,7 +4478,7 @@ class Agent:
             log_debug(f"Time to get references: {retrieval_timer.elapsed:.4f}s")
 
             if docs_from_knowledge is None:
-                return "No documents found"
+                return "No documents found."
             return self.convert_documents_to_string(docs_from_knowledge)
 
         async def asearch_knowledge_base(query: str) -> str:
@@ -4611,13 +4607,12 @@ class Agent:
         """
         search_filters = {}
 
-        # If agentic filters exist and manual filters (passed by user) do not, use agentic filters
-        if filters and not effective_filters:
-            search_filters = filters
-
         # If both agentic filters exist and manual filters (passed by user) exist, use manual filters (give priority to user and override)
         if filters and effective_filters:
             search_filters = effective_filters
+        # If agentic filters exist and manual filters (passed by user) do not, use agentic filters
+        elif filters:
+            search_filters = filters
 
         log_info(f"Filters used by Agent: {search_filters}")
         return search_filters
@@ -4633,6 +4628,7 @@ class Agent:
             str: A string indicating the status of the addition.
         """
         import json
+        import uuid
 
         from agno.document import Document
 
@@ -4649,7 +4645,7 @@ class Agent:
                 content=document_content,
             )
         )
-        return "Successfully added to knowledge base"
+        return f"Successfully added to knowledge base with UUID: {uuid.uuid4()}"
 
     def update_memory(self, task: str) -> str:
         """Use this function to update the Agent's memory. Describe the task in detail.
@@ -4662,7 +4658,8 @@ class Agent:
         """
         self.memory = cast(AgentMemory, self.memory)
         try:
-            return self.memory.update_memory(input=task, force=True) or "Memory updated successfully"
+            result = self.memory.update_memory(input=task, force=True)
+            return result or f"Memory updated successfully (ID: {uuid.uuid4()})"
         except Exception as e:
             return f"Failed to update memory: {e}"
 
@@ -4680,6 +4677,8 @@ class Agent:
             agent_session: AgentSession = self.agent_session or self.get_agent_session(
                 session_id=session_id, user_id=user_id
             )
+            if agent_session is None:
+                return
             create_agent_session(
                 session=AgentSessionCreate(
                     session_id=agent_session.session_id,
@@ -4734,6 +4733,9 @@ class Agent:
             agent_session: AgentSession = self.agent_session or self.get_agent_session(
                 session_id=session_id, user_id=user_id
             )
+
+            if agent_session is None:
+                return
 
             create_agent_run(
                 run=AgentRunCreate(
@@ -5670,7 +5672,7 @@ class Agent:
 
     def _append_to_reasoning_content(self, content: str) -> None:
         """Helper to append content to the reasoning_content field."""
-        if not hasattr(self.run_response, "reasoning_content") or not self.run_response.reasoning_content:  # type: ignore
+        if not getattr(self.run_response, "reasoning_content", None):
             self.run_response.reasoning_content = content  # type: ignore
         else:
             self.run_response.reasoning_content += content  # type: ignore
@@ -5712,7 +5714,7 @@ class Agent:
             # Log the error but don't crash
             from agno.utils.log import log_error
 
-            log_error(f"Failed to add reasoning metrics to extra_data: {str(e)}")
+            log_error(f"Failed to add reasoning metrics to extra_data: {e!s}")
 
     def _get_effective_filters(self, knowledge_filters: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
         """
@@ -5726,17 +5728,9 @@ class Agent:
         """
         effective_filters = None
 
-        # If agent has filters, use those as a base
-        if self.knowledge_filters:
-            effective_filters = self.knowledge_filters.copy()
-
         # If run has filters, they override agent filters
         if knowledge_filters:
-            if effective_filters:
-                # Merge filters, with run filters taking priority
-                effective_filters.update(knowledge_filters)
-            else:
-                effective_filters = knowledge_filters
+            effective_filters = knowledge_filters
 
         if effective_filters:
             log_debug(f"Using knowledge filters: {effective_filters}")
