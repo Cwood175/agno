@@ -12,8 +12,8 @@ from agno.utils.log import log_debug, log_error, log_info
 try:
     from google.genai import Client
     from google.genai.types import GenerateImagesResponse, GenerateVideosOperation
-except (ModuleNotFoundError, ImportError):
-    raise ImportError("`google-genai` not installed. Please install using `pip install google-genai`")
+except (ModuleNotFoundError, ImportError) as e:
+    raise ImportError(f"`google-genai` not installed. Please install using `pip install google-genai`: {e}") from e
 
 
 class GeminiTools(Toolkit):
@@ -85,7 +85,6 @@ class GeminiTools(Toolkit):
             log_debug("DEBUG: Raw Gemini API response")
 
             # Extract image bytes
-            image_bytes = response.generated_images[0].image.image_bytes
             for generated_image in response.generated_images:
                 image_bytes = generated_image.image.image_bytes
                 if not image_bytes:
@@ -142,13 +141,21 @@ class GeminiTools(Toolkit):
 
             while not operation.done:
                 time.sleep(5)
-                operation = self.client.operations.get(operation=operation)
+                try:
+                    operation = self.client.operations.get(operation=operation)
+                except Exception as e:
+                    log_error(f"Failed to poll video generation operation: {e}")
+                    return f"Failed to poll video generation operation: {e}"
 
             for video in operation.result.generated_videos:
                 generated_video = video.video
 
                 media_id = str(uuid4())
-                encoded_video = base64.b64encode(generated_video.video_bytes).decode("utf-8")
+                try:
+                    encoded_video = base64.b64encode(generated_video.video_bytes).decode("utf-8")
+                except Exception as e:
+                    log_error(f"Failed to encode video bytes: {e}")
+                    return f"Failed to encode video bytes: {e}"
 
                 agent.add_video(
                     VideoArtifact(

@@ -8,7 +8,7 @@ from agno.utils.http import async_fetch_with_retry, fetch_with_retry
 from agno.utils.log import log_info, logger
 
 try:
-    from pypdf import PdfReader as DocumentReader  # noqa: F401
+    from pypdf import PdfReader as DocumentReader
     from pypdf.errors import PdfStreamError
 except ImportError:
     raise ImportError("`pypdf` not installed. Please install it via `pip install pypdf`.")
@@ -312,6 +312,8 @@ class PDFUrlImageReader(BasePDFReader):
         log_info(f"Reading: {url}")
         response = httpx.get(url, proxy=self.proxy) if self.proxy else httpx.get(url)
 
+        # Normalize URL to avoid trailing slash or query params in doc_name
+        url = url.split("?")[0].rstrip("/")
         doc_name = url.split("/")[-1].split(".")[0].replace(" ", "_")
         doc_reader = DocumentReader(BytesIO(response.content))
 
@@ -335,7 +337,9 @@ class PDFUrlImageReader(BasePDFReader):
 
         log_info(f"Reading: {url}")
 
-        client_args = {"proxy": self.proxy} if self.proxy else {}
+        # Normalize URL to avoid trailing slash or query params in doc_name
+        url = url.split("?")[0].rstrip("/")
+        client_args = {"proxies": self.proxy} if self.proxy else {}
         async with httpx.AsyncClient(**client_args) as client:  # type: ignore
             response = await client.get(url)
             response.raise_for_status()

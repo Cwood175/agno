@@ -134,7 +134,7 @@ class ApifyTools(Toolkit):
                     return json.dumps(results)
 
                 except Exception as e:
-                    error_msg = f"Error running Apify Actor {actor_id}: {str(e)}"
+                    error_msg = f"Error running Apify Actor {actor_id}: {e!s}"
                     logger.error(error_msg)
                     return json.dumps([{"error": error_msg}])
 
@@ -162,7 +162,7 @@ Returns:
             log_info(f"Registered Apify Actor '{actor_id}' as function '{tool_name}'")
 
         except Exception as e:
-            logger.error(f"Failed to register Apify Actor '{actor_id}': {str(e)}")
+            logger.error(f"Failed to register Apify Actor '{actor_id}': {e!s}")
 
 
 # Constants
@@ -310,7 +310,12 @@ def get_actor_latest_build(apify_client: ApifyClient, actor_id: str) -> Dict[str
         ValueError: If the Actor is not found or the build data is not found
         TypeError: If the build is not a dictionary
     """
-    if not (actor := apify_client.actor(actor_id).get()):
+    try:
+        actor = apify_client.actor(actor_id).get()
+    except Exception as e:
+        raise ValueError(f"Failed to get the Actor {actor_id}: {e}")
+
+    if not actor:
         raise ValueError(f"Actor {actor_id} not found.")
 
     if not (actor_obj_id := actor.get("id")):
@@ -344,12 +349,12 @@ def prune_actor_input_schema(input_schema: Dict[str, Any]) -> Tuple[Dict[str, An
     properties_out: Dict[str, Any] = {}
     for item, meta in properties.items():
         properties_out[item] = {}
-        if desc := meta.get("description"):
+        if isinstance(meta, dict) and (desc := meta.get("description")):
             properties_out[item]["description"] = (
                 desc[:MAX_DESCRIPTION_LEN] + "..." if len(desc) > MAX_DESCRIPTION_LEN else desc
             )
         for key_name in ("type", "default", "prefill", "enum"):
-            if value := meta.get(key_name):
+            if isinstance(meta, dict) and (value := meta.get(key_name)):
                 properties_out[item][key_name] = value
 
     return properties_out, required
