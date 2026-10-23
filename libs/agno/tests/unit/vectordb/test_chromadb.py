@@ -28,10 +28,7 @@ def chroma_db(mock_embedder):
     yield db
 
     # Cleanup after test
-    try:
-        db.drop()
-    except Exception:
-        pass
+    db.drop()
 
     if os.path.exists(TEST_PATH):
         shutil.rmtree(TEST_PATH)

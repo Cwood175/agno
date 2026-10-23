@@ -53,10 +53,12 @@ class GeminiTools(Toolkit):
             log_info("Using Gemini API")
             client_params["api_key"] = self.api_key
 
+        from google.genai.errors import APIError
+
         try:
             self.client = Client(**client_params)
             log_debug("Google GenAI Client created successfully.")
-        except Exception as e:
+        except (APIError, ValueError) as e:
             log_error(f"Failed to create Google GenAI Client: {e}", exc_info=True)
             raise ValueError(f"Failed to create Google GenAI Client. Error: {e}")
 
@@ -75,6 +77,8 @@ class GeminiTools(Toolkit):
         Returns:
             str: A message indicating success (including media ID) or failure.
         """
+
+        from google.genai.errors import APIError
 
         try:
             response: GenerateImagesResponse = self.client.models.generate_images(
@@ -104,9 +108,9 @@ class GeminiTools(Toolkit):
                     )
                 )
                 log_debug(f"Successfully generated image {media_id} with model {self.image_model}")
-            return "Image generated successfully"
+            return f"Image generated successfully with media ID: {media_id}"
 
-        except Exception as e:
+        except (APIError, AttributeError, IndexError, TypeError, ValueError) as e:
             log_error(f"Failed to generate image: Client or method not available ({e})")
             return f"Failed to generate image: Client or method not available ({e})"
 
@@ -129,6 +133,7 @@ class GeminiTools(Toolkit):
                 "Please set `vertexai=True` or environment variable `GOOGLE_GENAI_USE_VERTEXAI=true`."
             )
 
+        from google.genai.errors import APIError
         from google.genai.types import GenerateVideosConfig
 
         try:
@@ -159,7 +164,7 @@ class GeminiTools(Toolkit):
                     )
                 )
                 log_debug(f"Successfully generated video {media_id} with model {self.video_model}")
-            return "Video generated successfully"
-        except Exception as e:
+            return f"Video generated successfully with media ID: {media_id}"
+        except (APIError, AttributeError, TypeError, ValueError) as e:
             log_error(f"Failed to generate video: {e}")
             return f"Failed to generate video: {e}"
