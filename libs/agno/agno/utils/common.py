@@ -1,8 +1,8 @@
 from dataclasses import asdict
-from typing import Any, List, Optional, Type
+from typing import Any, Optional
 
 
-def isinstanceany(obj: Any, class_list: List[Type]) -> bool:
+def isinstanceany(obj: Any, class_list: list[type]) -> bool:
     """Returns True if obj is an instance of the classes in class_list"""
     for cls in class_list:
         if isinstance(obj, cls):
@@ -24,15 +24,13 @@ def str_to_int(inp: Optional[str]) -> Optional[int]:
     try:
         val = int(inp)
         return val
-    except Exception:
+    except ValueError:
         return None
 
 
 def is_empty(val: Any) -> bool:
     """Returns True if val is None or empty"""
-    if val is None or len(val) == 0 or val == "":
-        return True
-    return False
+    return val is None or len(val) == 0 or val == ""
 
 
 def get_image_str(repo: str, tag: str) -> str:

@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Union, get_args, get_origin
+from typing import Any, Optional, Union, get_args, get_origin
 
 from agno.utils.log import logger
 
@@ -6,7 +6,7 @@ from agno.utils.log import logger
 def is_origin_union_type(origin: Any) -> bool:
     import sys
 
-    if sys.version_info.minor >= 10:
+    if sys.version_info >= (3, 10):
         from types import UnionType  # type: ignore
 
         return origin in [Union, UnionType]
@@ -38,7 +38,7 @@ def get_json_type_for_py_type(arg: str) -> str:
     return "object"
 
 
-def get_json_schema_for_arg(t: Any) -> Optional[Dict[str, Any]]:
+def get_json_schema_for_arg(t: Any) -> Optional[dict[str, Any]]:
     # log_info(f"Getting JSON schema for arg: {t}")
     type_args = get_args(t)
     # log_info(f"Type args: {type_args}")
@@ -61,11 +61,12 @@ def get_json_schema_for_arg(t: Any) -> Optional[Dict[str, Any]]:
                     schema = get_json_schema_for_arg(arg)
                     if schema:
                         types.append(schema)
-                except Exception:
+                except (AttributeError, TypeError, ValueError) as e:
+                    logger.warning(f"Could not parse union argument {arg}: {e!s}")
                     continue
             return {"anyOf": types} if types else None
 
-    json_schema: Dict[str, Any] = {"type": get_json_type_for_py_type(t.__name__)}
+    json_schema: dict[str, Any] = {"type": get_json_type_for_py_type(t.__name__)}
     if json_schema["type"] == "object":
         json_schema["properties"] = {}
         json_schema["additionalProperties"] = False
@@ -73,9 +74,9 @@ def get_json_schema_for_arg(t: Any) -> Optional[Dict[str, Any]]:
 
 
 def get_json_schema(
-    type_hints: Dict[str, Any], param_descriptions: Optional[Dict[str, str]] = None, strict: bool = False
-) -> Dict[str, Any]:
-    json_schema: Dict[str, Any] = {
+    type_hints: dict[str, Any], param_descriptions: Optional[dict[str, str]] = None, strict: bool = False
+) -> dict[str, Any]:
+    json_schema: dict[str, Any] = {
         "type": "object",
         "properties": {},
     }
@@ -118,8 +119,8 @@ def get_json_schema(
 
             else:
                 logger.warning(f"Could not parse argument {k} of type {v}")
-        except Exception as e:
-            logger.error(f"Error processing argument {k}: {str(e)}")
+        except (AttributeError, KeyError, TypeError, ValueError) as e:
+            logger.error(f"Error processing argument {k}: {e!s}")
             continue
 
     return json_schema

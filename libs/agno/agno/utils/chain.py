@@ -1,22 +1,26 @@
+from __future__ import annotations
+
 import json
+from collections.abc import Iterator
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, Dict, Iterator, List, Optional, Union, cast
+from typing import Any, cast
+
+from pydantic import BaseModel
 
 from agno.agent import Agent
 from agno.run.response import RunResponse
 from agno.utils.log import log_debug, log_error
 from agno.workflow import Workflow
-from pydantic import BaseModel
 
 
 @dataclass
 class SequentialWorkFlow(Workflow):
     """A workflow that runs agents in sequence."""
 
-    agents: Optional[List[Agent]] = None
+    agents: list[Agent] | None = None
 
-    def __init__(self, agents: Optional[List[Agent]] = None, **kwargs):
+    def __init__(self, agents: list[Agent] | None = None, **kwargs):
         super().__init__(**kwargs)
         self.agents = agents
 
@@ -33,7 +37,7 @@ class SequentialWorkFlow(Workflow):
 
         current_message = input_message
         # To store responses from all agents for debugging
-        all_responses: Dict[str, Any] = {}
+        all_responses: dict[str, Any] = {}
 
         try:
             messages = []
@@ -67,10 +71,8 @@ class SequentialWorkFlow(Workflow):
                     # Fallback to JSON serialization for other types
                     try:
                         all_responses[key] = json.dumps(response.content)
-                    except Exception as e:
-                        raise ValueError(
-                            f"Failed to serialize response from agent '{key}': {e}"
-                        )
+                    except (TypeError, ValueError, OverflowError) as e:
+                        raise ValueError(f"Failed to serialize response from agent '{key}': {e}")
 
                 # Log the response
                 log_debug(f"Agent '{key}' response: {all_responses[key]}")
@@ -85,7 +87,7 @@ class SequentialWorkFlow(Workflow):
             final_response.messages = messages
             return final_response
 
-        except Exception as e:
+        except (TypeError, ValueError, OverflowError) as e:
             # Log the error and include the chain of responses for debugging
             log_error(f"Error in sequential chain: {e}")
             log_error(f"Responses so far: {all_responses}")
@@ -93,8 +95,8 @@ class SequentialWorkFlow(Workflow):
 
 
 def sequential_chain(
-    left: Union[Agent, SequentialWorkFlow],
-    *others: Union[Agent, SequentialWorkFlow, List[Union[Agent, SequentialWorkFlow]]],
+    left: Agent | SequentialWorkFlow,
+    *others: Agent | SequentialWorkFlow | list[Agent | SequentialWorkFlow],
 ) -> Any:
     """
     Create a workflow that runs agents in sequence.
@@ -112,6 +114,6 @@ def sequential_chain(
         if isinstance(agent, Agent):
             workflow.agents.append(agent)
         else:
-            raise ValueError("OR operator only accepts agents")
+            raise TypeError("OR operator only accepts agents")
 
     return workflow

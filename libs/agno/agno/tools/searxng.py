@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 import json
 import urllib.parse
-from typing import List, Optional
 
 import httpx
 
@@ -12,8 +13,8 @@ class Searxng(Toolkit):
     def __init__(
         self,
         host: str,
-        engines: List[str] = [],
-        fixed_max_results: Optional[int] = None,
+        engines: list[str] | None = None,
+        fixed_max_results: int | None = None,
         images: bool = False,
         it: bool = False,
         map: bool = False,
@@ -26,7 +27,7 @@ class Searxng(Toolkit):
         super().__init__(name="searxng", **kwargs)
 
         self.host = host
-        self.engines = engines
+        self.engines = engines if engines is not None else []
         self.fixed_max_results = fixed_max_results
 
         self.register(self.search)
@@ -142,7 +143,7 @@ class Searxng(Toolkit):
         """
         return self._search(query, "videos", max_results)
 
-    def _search(self, query: str, category: Optional[str] = None, max_results: int = 5) -> str:
+    def _search(self, query: str, category: str | None = None, max_results: int = 5) -> str:
         encoded_query = urllib.parse.quote(query)
         url = f"{self.host}/search?format=json&q={encoded_query}"
 
@@ -157,5 +158,5 @@ class Searxng(Toolkit):
             results = self.fixed_max_results or max_results
             resp["results"] = resp["results"][:results]
             return json.dumps(resp)
-        except Exception as e:
+        except (httpx.HTTPError, json.JSONDecodeError, KeyError, TypeError) as e:
             return f"Error fetching results from searxng: {e}"

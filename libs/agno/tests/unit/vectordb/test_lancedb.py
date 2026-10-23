@@ -28,10 +28,8 @@ def lance_db(mock_embedder):
     yield db
 
     # Cleanup after test
-    try:
+    if db.exists():
         db.drop()
-    except Exception:
-        pass
 
     if os.path.exists(TEST_PATH):
         shutil.rmtree(TEST_PATH)

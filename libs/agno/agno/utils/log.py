@@ -32,10 +32,9 @@ class ColoredRichHandler(RichHandler):
             return Text("")
 
         level_name = record.levelname.lower()
-        if self.source_type and self.source_type in LOG_STYLES:
-            if level_name in LOG_STYLES[self.source_type]:
-                color = LOG_STYLES[self.source_type][level_name]
-                return Text(record.levelname, style=color)
+        if self.source_type and self.source_type in LOG_STYLES and level_name in LOG_STYLES[self.source_type]:
+            color = LOG_STYLES[self.source_type][level_name]
+            return Text(record.levelname, style=color)
         return super().get_level_text(record)
 
 
@@ -69,7 +68,7 @@ def build_logger(logger_name: str, source_type: Optional[str] = None) -> Any:
     rich_handler = ColoredRichHandler(
         show_time=False,
         rich_tracebacks=False,
-        show_path=True if getenv("AGNO_API_RUNTIME") == "dev" else False,
+        show_path=getenv("AGNO_API_RUNTIME") == "dev",
         tracebacks_show_locals=False,
         source_type=source_type or "agent",
     )
@@ -116,7 +115,7 @@ def center_header(message: str, symbol: str = "*") -> str:
         import shutil
 
         terminal_width = shutil.get_terminal_size().columns
-    except Exception:
+    except OSError:
         terminal_width = 80  # fallback width
 
     header = f" {message} "
@@ -136,27 +135,21 @@ def use_agent_logger():
 
 
 def log_debug(msg, center: bool = False, symbol: str = "*", *args, **kwargs):
-    global logger
-    global debug_on
     if debug_on:
         logger.debug(msg, center, symbol, *args, **kwargs)
 
 
 def log_info(msg, center: bool = False, symbol: str = "*", *args, **kwargs):
-    global logger
     logger.info(msg, center, symbol, *args, **kwargs)
 
 
 def log_warning(msg, *args, **kwargs):
-    global logger
     logger.warning(msg, *args, **kwargs)
 
 
 def log_error(msg, *args, **kwargs):
-    global logger
     logger.error(msg, *args, **kwargs)
 
 
 def log_exception(msg, *args, **kwargs):
-    global logger
     logger.exception(msg, *args, **kwargs)

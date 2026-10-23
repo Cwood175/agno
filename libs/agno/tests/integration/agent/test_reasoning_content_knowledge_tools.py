@@ -46,7 +46,7 @@ def knowledge_base():
     # Only load if it doesn't exist yet (saves time in repeat tests)
     try:
         url_kb.load(recreate=False)
-    except Exception:
+    except (RuntimeError, ValueError):
         url_kb.load(recreate=True)
 
     return url_kb
