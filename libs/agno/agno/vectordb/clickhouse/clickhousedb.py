@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from hashlib import md5
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from agno.vectordb.clickhouse.index import HNSW
 
@@ -7,6 +9,7 @@ try:
     import clickhouse_connect
     import clickhouse_connect.driver.asyncclient
     import clickhouse_connect.driver.client
+    import clickhouse_connect.driver.exceptions
 except ImportError:
     raise ImportError("`clickhouse-connect` not installed. Use `pip install clickhouse-connect` to install it")
 
@@ -22,17 +25,17 @@ class Clickhouse(VectorDb):
         self,
         table_name: str,
         host: str,
-        username: Optional[str] = None,
+        username: str | None = None,
         password: str = "",
         port: int = 0,
         database_name: str = "ai",
-        dsn: Optional[str] = None,
+        dsn: str | None = None,
         compress: str = "lz4",
-        client: Optional[clickhouse_connect.driver.client.Client] = None,
-        asyncclient: Optional[clickhouse_connect.driver.asyncclient.AsyncClient] = None,
-        embedder: Optional[Embedder] = None,
+        client: clickhouse_connect.driver.client.Client | None = None,
+        asyncclient: clickhouse_connect.driver.asyncclient.AsyncClient | None = None,
+        embedder: Embedder | None = None,
         distance: Distance = Distance.cosine,
-        index: Optional[HNSW] = HNSW(),
+        index: HNSW | None = None,
     ):
         # Store connection parameters as instance attributes
         self.host = host
@@ -67,13 +70,13 @@ class Clickhouse(VectorDb):
             _embedder = OpenAIEmbedder()
             log_info("Embedder not provided, using OpenAIEmbedder as default.")
         self.embedder: Embedder = _embedder
-        self.dimensions: Optional[int] = self.embedder.dimensions
+        self.dimensions: int | None = self.embedder.dimensions
 
         # Distance metric
         self.distance: Distance = distance
 
         # Index for the collection
-        self.index: Optional[HNSW] = index
+        self.index: HNSW | None = index if index is not None else HNSW()
 
     async def _ensure_async_client(self):
         """Ensure we have an initialized async client."""
@@ -90,7 +93,7 @@ class Clickhouse(VectorDb):
             )
         return self.async_client
 
-    def _get_base_parameters(self) -> Dict[str, Any]:
+    def _get_base_parameters(self) -> dict[str, Any]:
         return {
             "table_name": self.table_name,
             "database_name": self.database_name,
@@ -106,7 +109,7 @@ class Clickhouse(VectorDb):
                     parameters=parameters,
                 )
             )
-        except Exception as e:
+        except clickhouse_connect.driver.exceptions.ClickHouseError as e:
             logger.error(e)
             return False
 
@@ -122,7 +125,7 @@ class Clickhouse(VectorDb):
                 parameters=parameters,
             )
             return bool(result)
-        except Exception as e:
+        except clickhouse_connect.driver.exceptions.ClickHouseError as e:
             logger.error(f"Async error checking if table exists: {e}")
             return False
 
@@ -464,9 +467,7 @@ class Clickhouse(VectorDb):
 
         return search_results
 
-    async def async_search(
-        self, query: str, limit: int = 5, filters: Optional[Dict[str, Any]] = None
-    ) -> List[Document]:
+    async def async_search(self, query: str, limit: int = 5, filters: dict[str, Any] | None = None) -> list[Document]:
         """Search for documents asynchronously."""
         async_client = await self._ensure_async_client()
 
@@ -478,7 +479,7 @@ class Clickhouse(VectorDb):
         parameters = self._get_base_parameters()
         where_query = ""
         if filters:
-            query_filters: List[str] = []
+            query_filters: list[str] = []
             for key, value in filters.values():
                 query_filters.append(f"{{{key}_key:String}} = {{{key}_value:String}}")
                 parameters[f"{key}_key"] = key
@@ -506,14 +507,14 @@ class Clickhouse(VectorDb):
                 clickhouse_query,
                 parameters=parameters,
             )
-        except Exception as e:
+        except clickhouse_connect.driver.exceptions.ClickHouseError as e:
             logger.error(f"Async error searching for documents: {e}")
             logger.error("Table might not exist, creating for future use")
             await self.async_create()
             return []
 
         # Build search results
-        search_results: List[Document] = []
+        search_results: list[Document] = []
         for result in results.result_rows:
             search_results.append(
                 Document(

@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 from agno.tools import Toolkit
 from agno.utils.log import log_debug, log_info, logger
@@ -14,7 +14,7 @@ class DuckDbTools(Toolkit):
         self,
         db_path: Optional[str] = None,
         connection: Optional[duckdb.DuckDBPyConnection] = None,
-        init_commands: Optional[List] = None,
+        init_commands: Optional[list] = None,
         read_only: bool = False,
         config: Optional[dict] = None,
         run_queries: bool = True,
@@ -30,7 +30,7 @@ class DuckDbTools(Toolkit):
         self.read_only: bool = read_only
         self.config: Optional[dict] = config
         self._connection: Optional[duckdb.DuckDBPyConnection] = connection
-        self.init_commands: Optional[List] = init_commands
+        self.init_commands: Optional[list] = init_commands
 
         self.register(self.show_tables)
         self.register(self.describe_table)
@@ -53,7 +53,7 @@ class DuckDbTools(Toolkit):
         :return duckdb.DuckDBPyConnection: duckdb connection
         """
         if self._connection is None:
-            connection_kwargs: Dict[str, Any] = {}
+            connection_kwargs: dict[str, Any] = {}
             if self.db_path is not None:
                 connection_kwargs["database"] = self.db_path
             if self.read_only:
@@ -65,7 +65,7 @@ class DuckDbTools(Toolkit):
                 if self.init_commands is not None:
                     for command in self.init_commands:
                         self._connection.sql(command)
-            except Exception as e:
+            except duckdb.Error as e:
                 logger.exception(e)
                 logger.warning("Failed to run duckdb init commands")
 
@@ -147,8 +147,6 @@ class DuckDbTools(Toolkit):
             return str(e)
         except duckdb.Error as e:
             return str(e)
-        except Exception as e:
-            return str(e)
 
     def summarize_table(self, table: str) -> str:
         """Function to compute a number of aggregates over a table.
@@ -174,7 +172,7 @@ class DuckDbTools(Toolkit):
         # Get the file name from the path
         file_name = path.split("/")[-1]
         # Get the file name without extension from the path
-        table, extension = os.path.splitext(file_name)
+        table, _ = os.path.splitext(file_name)
         # If the table isn't a valid SQL identifier, we'll need to use something else
         table = table.replace("-", "_").replace(".", "_").replace(" ", "_").replace("/", "_")
 
@@ -226,7 +224,7 @@ class DuckDbTools(Toolkit):
         log_debug(f"Exported {table} to {path}/{table}")
         return result
 
-    def load_local_path_to_table(self, path: str, table: Optional[str] = None) -> Tuple[str, str]:
+    def load_local_path_to_table(self, path: str, table: str | None = None) -> tuple[str, str]:
         """Load a local file into duckdb
 
         :param path: Path to load
@@ -241,7 +239,7 @@ class DuckDbTools(Toolkit):
             # Get the file name from the s3 path
             file_name = path.split("/")[-1]
             # Get the file name without extension from the s3 path
-            table, extension = os.path.splitext(file_name)
+            table, _ = os.path.splitext(file_name)
             # If the table isn't a valid SQL identifier, we'll need to use something else
             table = table.replace("-", "_").replace(".", "_").replace(" ", "_").replace("/", "_")
 
@@ -252,8 +250,8 @@ class DuckDbTools(Toolkit):
         return table, create_statement
 
     def load_local_csv_to_table(
-        self, path: str, table: Optional[str] = None, delimiter: Optional[str] = None
-    ) -> Tuple[str, str]:
+        self, path: str, table: str | None = None, delimiter: str | None = None
+    ) -> tuple[str, str]:
         """Load a local CSV file into duckdb
 
         :param path: Path to load
@@ -269,7 +267,7 @@ class DuckDbTools(Toolkit):
             # Get the file name from the s3 path
             file_name = path.split("/")[-1]
             # Get the file name without extension from the s3 path
-            table, extension = os.path.splitext(file_name)
+            table, _ = os.path.splitext(file_name)
             # If the table isn't a valid SQL identifier, we'll need to use something else
             table = table.replace("-", "_").replace(".", "_").replace(" ", "_").replace("/", "_")
 
@@ -285,7 +283,7 @@ class DuckDbTools(Toolkit):
         log_debug(f"Loaded CSV {path} into duckdb as {table}")
         return table, create_statement
 
-    def load_s3_path_to_table(self, path: str, table: Optional[str] = None) -> Tuple[str, str]:
+    def load_s3_path_to_table(self, path: str, table: str | None = None) -> tuple[str, str]:
         """Load a file from S3 into duckdb
 
         :param path: S3 path to load
@@ -300,7 +298,7 @@ class DuckDbTools(Toolkit):
             # Get the file name from the s3 path
             file_name = path.split("/")[-1]
             # Get the file name without extension from the s3 path
-            table, extension = os.path.splitext(file_name)
+            table, _ = os.path.splitext(file_name)
             # If the table isn't a valid SQL identifier, we'll need to use something else
             table = table.replace("-", "_").replace(".", "_").replace(" ", "_").replace("/", "_")
 
