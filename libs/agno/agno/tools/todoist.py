@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import json
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from agno.tools import Toolkit
 from agno.utils.log import logger
@@ -16,7 +18,7 @@ class TodoistTools(Toolkit):
 
     def __init__(
         self,
-        api_token: Optional[str] = None,
+        api_token: str | None = None,
         create_task: bool = True,
         get_task: bool = True,
         update_task: bool = True,
@@ -62,9 +64,9 @@ class TodoistTools(Toolkit):
         if get_projects:
             self.register(self.get_projects)
 
-    def _task_to_dict(self, task: Any) -> Dict[str, Any]:
+    def _task_to_dict(self, task: Any) -> dict[str, Any]:
         """Convert a Todoist task to a dictionary with proper typing."""
-        task_dict: Dict[str, Any] = {
+        task_dict: dict[str, Any] = {
             "id": task.id,
             "content": task.content,
             "description": task.description,
@@ -91,10 +93,10 @@ class TodoistTools(Toolkit):
     def create_task(
         self,
         content: str,
-        project_id: Optional[str] = None,
-        due_string: Optional[str] = None,
-        priority: Optional[int] = None,
-        labels: Optional[List[str]] = None,
+        project_id: str | None = None,
+        due_string: str | None = None,
+        priority: int | None = None,
+        labels: list[str] | None = None,
     ) -> str:
         """
         Create a new task in Todoist.
@@ -116,8 +118,8 @@ class TodoistTools(Toolkit):
             # Convert task to a dictionary and handle the Due object
             task_dict = self._task_to_dict(task)
             return json.dumps(task_dict)
-        except Exception as e:
-            logger.error(f"Failed to create task: {str(e)}")
+        except (TodoistAPIError, TypeError, ValueError) as e:
+            logger.error(f"Failed to create task: {e!s}")
             return json.dumps({"error": str(e)})
 
     def get_task(self, task_id: str) -> str:
@@ -126,23 +128,23 @@ class TodoistTools(Toolkit):
             task = self.api.get_task(task_id)
             task_dict = self._task_to_dict(task)
             return json.dumps(task_dict)
-        except Exception as e:
-            logger.error(f"Failed to get task: {str(e)}")
+        except (TodoistAPIError, TypeError, ValueError) as e:
+            logger.error(f"Failed to get task: {e!s}")
             return json.dumps({"error": str(e)})
 
     def update_task(
         self,
         task_id: str,
-        content: Optional[str] = None,
-        description: Optional[str] = None,
-        labels: Optional[List[str]] = None,
-        priority: Optional[int] = None,
-        due_string: Optional[str] = None,
-        due_date: Optional[str] = None,
-        due_datetime: Optional[str] = None,
-        due_lang: Optional[str] = None,
-        assignee_id: Optional[str] = None,
-        section_id: Optional[str] = None,
+        content: str | None = None,
+        description: str | None = None,
+        labels: list[str] | None = None,
+        priority: int | None = None,
+        due_string: str | None = None,
+        due_date: str | None = None,
+        due_datetime: str | None = None,
+        due_lang: str | None = None,
+        assignee_id: str | None = None,
+        section_id: str | None = None,
     ) -> str:
         """
         Update an existing task with the specified parameters.
@@ -165,7 +167,7 @@ class TodoistTools(Toolkit):
         """
         try:
             # Build updates dictionary with only provided parameters
-            updates: Dict[str, Any] = {}
+            updates: dict[str, Any] = {}
             if content is not None:
                 updates["content"] = content
             if description is not None:
@@ -189,7 +191,7 @@ class TodoistTools(Toolkit):
 
             success = self.api.update_task(task_id=task_id, **updates)
             return json.dumps({"success": success})
-        except Exception as e:
+        except TodoistAPIError as e:
             error_msg = str(e)
             logger.error(f"Failed to update task: {error_msg}")
             return json.dumps({"error": error_msg})
@@ -199,8 +201,8 @@ class TodoistTools(Toolkit):
         try:
             success = self.api.complete_task(task_id)
             return json.dumps({"success": success})
-        except Exception as e:
-            logger.error(f"Failed to close task: {str(e)}")
+        except TodoistAPIError as e:
+            logger.error(f"Failed to close task: {e!s}")
             return json.dumps({"error": str(e)})
 
     def delete_task(self, task_id: str) -> str:
@@ -208,8 +210,8 @@ class TodoistTools(Toolkit):
         try:
             success = self.api.delete_task(task_id)
             return json.dumps({"success": success})
-        except Exception as e:
-            logger.error(f"Failed to delete task: {str(e)}")
+        except TodoistAPIError as e:
+            logger.error(f"Failed to delete task: {e!s}")
             return json.dumps({"error": str(e)})
 
     def get_active_tasks(self) -> str:
@@ -221,8 +223,8 @@ class TodoistTools(Toolkit):
                 task_dict = self._task_to_dict(task)
                 tasks_list.append(task_dict)
             return json.dumps(tasks_list)
-        except Exception as e:
-            logger.error(f"Failed to get active tasks: {str(e)}")
+        except (TodoistAPIError, TypeError, ValueError) as e:
+            logger.error(f"Failed to get active tasks: {e!s}")
             return json.dumps({"error": str(e)})
 
     def get_projects(self) -> str:
@@ -230,6 +232,6 @@ class TodoistTools(Toolkit):
         try:
             projects = self.api.get_projects()
             return json.dumps([project.__dict__ for project in projects])
-        except Exception as e:
-            logger.error(f"Failed to get projects: {str(e)}")
+        except (TodoistAPIError, TypeError, ValueError) as e:
+            logger.error(f"Failed to get projects: {e!s}")
             return json.dumps({"error": str(e)})

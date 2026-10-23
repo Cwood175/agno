@@ -26,7 +26,7 @@ def download_image(url: str, output_path: str) -> bool:
         path.parent.mkdir(parents=True, exist_ok=True)
 
         # Write the image to the local file in binary mode
-        with open(output_path, "wb") as file:
+        with path.open("wb") as file:
             for chunk in response.iter_bytes(chunk_size=8192):
                 if chunk:
                     file.write(chunk)
@@ -37,7 +37,7 @@ def download_image(url: str, output_path: str) -> bool:
     except httpx.HTTPError as e:
         print(f"Error downloading the image: {e}")
         return False
-    except IOError as e:
+    except OSError as e:
         print(f"Error saving the image to '{output_path}': {e}")
         return False
 
@@ -47,7 +47,8 @@ def download_video(url: str, output_path: str) -> str:
     response = httpx.get(url)
     response.raise_for_status()
 
-    with open(output_path, "wb") as f:
+    output_file = Path(output_path)
+    with output_file.open("wb") as f:
         for chunk in response.iter_bytes(chunk_size=8192):
             f.write(chunk)
     return output_path
@@ -71,13 +72,13 @@ def download_file(url: str, output_path: str) -> None:
         output_file = Path(output_path)
         output_file.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(output_file, "wb") as f:
+        with output_file.open("wb") as f:
             for chunk in response.iter_bytes(chunk_size=8192):
                 if chunk:
                     f.write(chunk)
 
     except httpx.HTTPError as e:
-        raise Exception(f"Failed to download file from {url}: {str(e)}")
+        raise httpx.HTTPError(f"Failed to download file from {url}: {e}") from e
 
 
 def save_base64_data(base64_data: str, output_path: str) -> bool:
@@ -87,18 +88,18 @@ def save_base64_data(base64_data: str, output_path: str) -> bool:
     try:
         # Decode the base64 string into bytes
         decoded_data = base64.b64decode(base64_data)
-    except Exception as e:
-        raise Exception(f"An unexpected error occurred during base64 decoding: {e}")
+    except ValueError as e:
+        raise ValueError(f"An unexpected error occurred during base64 decoding: {e}") from e
 
     try:
         path = Path(output_path)
         path.parent.mkdir(parents=True, exist_ok=True)
 
         # Write the bytes to the local file in binary mode
-        with open(path, "wb") as file:
+        with path.open("wb") as file:
             file.write(decoded_data)
 
         print(f"Data successfully saved to '{path}'.")
         return True
-    except Exception as e:
-        raise Exception(f"An unexpected error occurred while saving data to '{output_path}': {e}")
+    except OSError as e:
+        raise OSError(f"An unexpected error occurred while saving data to '{output_path}': {e}") from e

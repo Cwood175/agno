@@ -86,6 +86,7 @@ class GeminiTools(Toolkit):
 
             # Extract image bytes
             image_bytes = response.generated_images[0].image.image_bytes
+            media_ids = []
             for generated_image in response.generated_images:
                 image_bytes = generated_image.image.image_bytes
                 if not image_bytes:
@@ -95,6 +96,7 @@ class GeminiTools(Toolkit):
                 actual_mime_type = "image/png"
 
                 media_id = str(uuid4())
+                media_ids.append(media_id)
                 agent.add_image(
                     ImageArtifact(
                         id=media_id,
@@ -104,7 +106,7 @@ class GeminiTools(Toolkit):
                     )
                 )
                 log_debug(f"Successfully generated image {media_id} with model {self.image_model}")
-            return "Image generated successfully"
+            return f"Image generated successfully with media ID(s): {', '.join(media_ids)}"
 
         except Exception as e:
             log_error(f"Failed to generate image: Client or method not available ({e})")
@@ -144,10 +146,12 @@ class GeminiTools(Toolkit):
                 time.sleep(5)
                 operation = self.client.operations.get(operation=operation)
 
+            media_ids = []
             for video in operation.result.generated_videos:
                 generated_video = video.video
 
                 media_id = str(uuid4())
+                media_ids.append(media_id)
                 encoded_video = base64.b64encode(generated_video.video_bytes).decode("utf-8")
 
                 agent.add_video(
@@ -159,7 +163,7 @@ class GeminiTools(Toolkit):
                     )
                 )
                 log_debug(f"Successfully generated video {media_id} with model {self.video_model}")
-            return "Video generated successfully"
+            return f"Video generated successfully with media ID(s): {', '.join(media_ids)}"
         except Exception as e:
             log_error(f"Failed to generate video: {e}")
             return f"Failed to generate video: {e}"

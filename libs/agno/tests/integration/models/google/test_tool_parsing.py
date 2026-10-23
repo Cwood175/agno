@@ -1,4 +1,7 @@
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from __future__ import annotations
+
+from collections.abc import Sequence
+from typing import Any, Optional
 
 from pydantic import BaseModel
 
@@ -77,9 +80,7 @@ def test_optional_parameters_tool_parsing():
 
 
 def test_union_type_parameters_tool_parsing():
-    def generate_weather_string(
-        degrees: Union[int, float], city: str = "New York", condition: Optional[str] = None
-    ) -> str:
+    def generate_weather_string(degrees: float, city: str = "New York", condition: Optional[str] = None) -> str:
         """
         Generate a weather string for any city
 
@@ -105,7 +106,7 @@ def test_union_type_parameters_tool_parsing():
 
 
 def test_python312_union_syntax_tool_parsing():
-    def get_weather_data(temperature: int | float, location: str = "San Francisco", unit: str | None = None) -> str:
+    def get_weather_data(temperature: float, location: str = "San Francisco", unit: str | None = None) -> str:
         """
         Get weather data for a location
 
@@ -161,7 +162,7 @@ def test_pydantic_model_parameters_tool_parsing():
 
 def test_complex_nested_parameters_tool_parsing():
     def travel_recommendation(
-        destination: str, preferences: Dict[str, Any], budget_range: List[float], include_weather: bool = True
+        destination: str, preferences: dict[str, Any], budget_range: list[float], include_weather: bool = True
     ) -> str:
         """
         Get travel recommendations for a destination
@@ -216,7 +217,7 @@ def test_multiple_functions_tool_parsing():
 
 
 def test_list_with_generics_tool_parsing():
-    def get_city_weather_forecast(cities: List[str], days: int = 3) -> str:
+    def get_city_weather_forecast(cities: list[str], days: int = 3) -> str:
         """
         Get weather forecast for multiple cities
 
@@ -267,7 +268,7 @@ def test_tuple_with_fixed_types_tool_parsing():
 
 def test_sequence_with_optional_values_tool_parsing():
     def get_historical_temperatures(
-        city: str, dates: Sequence[str], include_humidity: Optional[List[bool]] = None
+        city: str, dates: Sequence[str], include_humidity: Optional[list[bool]] = None
     ) -> str:
         """
         Get historical temperature data for a city on multiple dates
@@ -296,7 +297,7 @@ def test_sequence_with_optional_values_tool_parsing():
 
 
 def test_optional_sequence_tool_parsing():
-    def get_weather_alerts(region: str, severity: str = "all", affected_cities: Optional[List[str]] = None) -> str:
+    def get_weather_alerts(region: str, severity: str = "all", affected_cities: Optional[list[str]] = None) -> str:
         """
         Get weather alerts for a region
 
@@ -323,8 +324,8 @@ def test_optional_sequence_tool_parsing():
 
 def test_mixed_sequence_types_tool_parsing():
     def get_trip_weather(
-        destinations: List[str],
-        travel_dates: Tuple[str, str],  # (start_date, end_date)
+        destinations: list[str],
+        travel_dates: tuple[str, str],  # (start_date, end_date)
         optional_locations: Optional[Sequence[str]] = None,
     ) -> str:
         """
@@ -359,20 +360,20 @@ def test_nested_pydantic_model_with_dict_tool_parsing():
     class Accommodation(BaseModel):
         hotel_name: str
         room_type: str
-        amenities: List[str]
+        amenities: list[str]
         price_per_night: float
 
     class Location(BaseModel):
         city: str
         country: str
-        coordinates: Optional[Tuple[float, float]] = None
+        coordinates: Optional[tuple[float, float]] = None
 
     class TravelPlan(BaseModel):
         location: Location
         accommodation: Accommodation
         duration_days: int
         travelers: int
-        preferences: Dict[str, List[str]]
+        preferences: dict[str, list[str]]
         budget: Optional[float] = None
 
     def plan_vacation(travel_plan: TravelPlan) -> str:
